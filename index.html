@@ -132,7 +132,7 @@ textarea{min-height:90px;resize:vertical}
         <div class="small" id="modalSub">Click an event to read details</div>
       </div>
       <div>
-        <button id="modalAdd" class="btn-primary">Add Admin</button>
+        <button id="modalAdd" class="btn-primary">Add (admin)</button>
         <button id="modalClose" class="btn">Close</button>
       </div>
     </div>
@@ -268,7 +268,6 @@ async function pushEventsToGitHub(token, eventsObj, currentSha){
   if(!res.ok){
     const text = await res.text();
     console.error('GitHub PUT error body', text);
-    // Throw an Error that includes status so caller can inspect
     const err = new Error(`GitHub API error ${res.status}: ${text}`);
     err.status = res.status;
     err.body = text;
@@ -293,8 +292,17 @@ function renderMonth(d = new Date()){
     cell.dataset.date = iso;
     cell.innerHTML = `<div class="date">${day}</div><div class="events"></div>`;
     const evs = events[iso] || [];
-    if(evs.length) cell.querySelector('.events').innerHTML = evs.map(e => `<span class="eventDot">${escapeHtml(e.title)}</span>`).join('');
-    cell.addEventListener('click', () => onDayClick(iso));
+    if(evs.length) cell.querySelector('.events').innerHTML = evs.map((e, idx) => `<span class="eventDot" data-idx="${idx}" data-date="${iso}">${escapeHtml(e.title)}</span>`).join('');
+    cell.addEventListener('click', (ev) => {
+      // If user clicked an event dot, open modal for that date; otherwise open day panel if admin
+      const target = ev.target;
+      const date = cell.dataset.date;
+      if(target.classList.contains('eventDot')){
+        openEventModal(date);
+      } else {
+        onDayClick(date);
+      }
+    });
     cal.appendChild(cell);
   }
 }
@@ -368,39 +376,59 @@ function openEventModal(date){
 }
 
 /* Add/Edit/Delete (admin) */
+/* Ensure we always use a reliable date source: panel.dataset.date or eventModalBackdrop.dataset.date */
 addEvent.onclick = async ()=>{
   if(!adminMode) return alert('Only admin can add events');
-  const date = panel.dataset.date;
+  const date = panel.dataset.date || eventModalBackdrop.dataset.date;
+  if(!date) return alert('Select a date first');
   await addEventToDate(date);
 }
 modalAdd.onclick = ()=>{
   if(!adminMode) return alert('Only admin can add events');
   const date = eventModalBackdrop.dataset.date;
+  if(!date) return alert('No date selected');
   openPanel(date);
   eventTitle.focus();
   eventModalBackdrop.classList.remove('show');
 }
 
 async function addEventToDate(date){
+  // normalize date to ISO YYYY-MM-DD
+  const isoDate = normalizeIsoDate(date);
   const title = eventTitle.value.trim(); const description = eventDesc.value.trim();
   if(!title) return alert('Enter title');
-  const all = loadLocalEvents(); all[date] = all[date] || []; all[date].push({title,description});
+  const all = loadLocalEvents();
+  all[isoDate] = all[isoDate] || [];
+  // push new event at end
+  all[isoDate].push({title,description});
+  // dedupe just in case
+  all[isoDate] = dedupeEventsArray(all[isoDate]);
   saveLocalEvents(all);
-  renderMonth(viewDate); renderEventsPanel();
+  renderMonth(viewDate);
+  renderEventsPanel();
+  // clear inputs after add
+  eventTitle.value = '';
+  eventDesc.value = '';
+  // push to GitHub (robust)
   await tryPushToGitHub(all);
 }
 
 function editEvent(date,i){
   if(!adminMode) return alert('Only admin can edit events');
-  const all = loadLocalEvents(); const ev = all[date][i];
+  const all = loadLocalEvents(); const ev = (all[date] || [])[i];
+  if(!ev) return alert('Event not found');
   const t = prompt('Edit title', ev.title); if(t===null) return;
   const d = prompt('Edit description', ev.description); if(d===null) return;
-  all[date][i] = {title: t, description: d}; saveLocalEvents(all); renderMonth(viewDate); renderEventsPanel();
+  all[date][i] = {title: t, description: d};
+  // dedupe after edit
+  all[date] = dedupeEventsArray(all[date]);
+  saveLocalEvents(all); renderMonth(viewDate); renderEventsPanel();
   tryPushToGitHub(all);
 }
 function deleteEvent(date,i){
   if(!adminMode) return alert('Only admin can delete events');
-  const all = loadLocalEvents(); all[date].splice(i,1); if(!all[date].length) delete all[date]; saveLocalEvents(all); renderMonth(viewDate); renderEventsPanel();
+  const all = loadLocalEvents(); if(!all[date]) return;
+  all[date].splice(i,1); if(!all[date].length) delete all[date]; saveLocalEvents(all); renderMonth(viewDate); renderEventsPanel();
   tryPushToGitHub(all);
 }
 
@@ -415,7 +443,7 @@ next.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMon
 /* Admin login via token only */
 adminBtn.onclick = async ()=>{
   if(adminMode){
-    adminMode=false; sessionStorage.removeItem('isAdmin'); adminBtn.textContent='Admin Login'; updateAddSectionVisibility(); renderEventsPanel(); setSessionToken(''); githubStatus.textContent = ''; return;
+    adminMode=false; sessionStorage.removeItem('isAdmin'); adminBtn.textContent='Login'; updateAddSectionVisibility(); renderEventsPanel(); setSessionToken(''); githubStatus.textContent = ''; return;
   }
   tokenInput.value = '';
   tokenModalBackdrop.classList.add('show'); tokenModalBackdrop.setAttribute('aria-hidden','false');
@@ -502,6 +530,14 @@ async function pullFromGitHubSession(showErrors = false){
 function escapeHtml(s){
   if(!s) return '';
   return s.replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]) });
+}
+function normalizeIsoDate(d){
+  // Accept either YYYY-MM-DD or Date object or other string; return YYYY-MM-DD
+  if(!d) return '';
+  if(typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  const dt = new Date(d);
+  if(isNaN(dt)) return d;
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
 }
 
 /* Merge helpers for conflict resolution and dedupe */

@@ -132,7 +132,7 @@ textarea{min-height:90px;resize:vertical}
         <div class="small" id="modalSub">Click an event to read details</div>
       </div>
       <div>
-        <button id="modalAdd" class="btn-primary">Add (admin)</button>
+        <button id="modalAdd" class="btn-primary">Add Event</button>
         <button id="modalClose" class="btn">Close</button>
       </div>
     </div>
@@ -151,7 +151,7 @@ textarea{min-height:90px;resize:vertical}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
       <div>
         <h3 id="tokenLoginTitle" style="margin:0">Admin Login</h3>
-        <div class="small" style="margin-top:6px">Input Token</div>
+        <!-- <div class="small" style="margin-top:6px">Input Token</div> -->
       </div>
       <div style="display:flex;gap:8px">
         <button id="tokenCancel" class="btn">Cancel</button>
@@ -160,7 +160,7 @@ textarea{min-height:90px;resize:vertical}
 
     <div class="token-grid" style="margin-top:12px">
       <label for="tokenInput" class="small">Access Token</label>
-      <input id="tokenInput" type="password" placeholder="ghp_xxx..." autocomplete="one-time-code" />
+      <input id="tokenInput" type="password" placeholder="github_pat_..." autocomplete="one-time-code" />
       <div class="token-actions" style="margin-top:6px">
         <button id="tokenSubmit" class="btn-primary">Connect</button>
       </div>
@@ -369,7 +369,7 @@ function openEventModal(date){
       eventModalList.appendChild(card);
     });
   }
-  modalAdminNote.textContent = adminMode ? 'You are viewing as admin.' : 'Viewing only. Login as admin to modify.';
+  // modalAdminNote.textContent = adminMode ? 'You are viewing as admin.' : 'Viewing only. Login as admin to modify.';
   modalAdd.style.display = adminMode ? 'inline-block' : 'none';
   eventModalBackdrop.classList.add('show'); eventModalBackdrop.setAttribute('aria-hidden','false');
   eventModalBackdrop.dataset.date = date;
@@ -454,7 +454,7 @@ tokenCancel.onclick = ()=>{ tokenModalBackdrop.classList.remove('show'); tokenMo
 
 tokenSubmit.onclick = async ()=>{
   const token = tokenInput.value.trim();
-  if(!token) return alert('Paste a GitHub Personal Access Token (PAT).');
+  if(!token) return alert('Personal Access Token: ');
   tokenModalBackdrop.classList.remove('show'); tokenModalBackdrop.setAttribute('aria-hidden','true');
   try{
     const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
@@ -470,7 +470,7 @@ tokenSubmit.onclick = async ()=>{
           saveLocalEvents(res.json);
           if(res.sha) localStorage.setItem('gh_sha', res.sha);
           renderMonth(viewDate);
-          alert('Connected and pulled events from GitHub (if file existed).');
+          // alert('Connected and pulled events from GitHub (if file existed).');
         } else {
           alert('Connected. No events file found in repo (will create on first push).');
         }
@@ -739,3 +739,4 @@ function updateAddSectionVisibility(){
 </script>
 </body>
 </html>
+

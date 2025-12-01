@@ -1,977 +1,514 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Planner</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-            color: white;
-            padding: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header-left h1 {
-            font-size: 28px;
-        }
-
-        .user-section {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-info {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 10px 20px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .admin-badge {
-            background: #fbbf24;
-            color: #92400e;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        button {
-            cursor: pointer;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 10px 20px;
-        }
-
-        .btn-primary:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-danger {
-            background: #ef4444;
-            color: white;
-            padding: 10px 20px;
-        }
-
-        .btn-danger:hover {
-            background: #dc2626;
-        }
-
-        .month-nav {
-            background: #f9fafb;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .month-nav button {
-            background: white;
-            padding: 10px 20px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .month-nav button:hover {
-            background: #f3f4f6;
-        }
-
-        .month-nav h2 {
-            font-size: 24px;
-            color: #1f2937;
-        }
-
-        .calendar {
-            padding: 30px;
-        }
-
-        .day-names {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .day-name {
-            text-align: center;
-            font-weight: 600;
-            color: #6b7280;
-            padding: 10px 0;
-        }
-
-        .days-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 10px;
-        }
-
-        .day-cell {
-            aspect-ratio: 1;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 10px;
-            background: white;
-            transition: all 0.3s;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .day-cell:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .day-cell.today {
-            border-color: #3b82f6;
-            background: #eff6ff;
-        }
-
-        .day-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 5px;
-        }
-
-        .day-number {
-            font-weight: 600;
-            color: #374151;
-        }
-
-        .day-cell.today .day-number {
-            color: #2563eb;
-        }
-
-        .add-btn {
-            background: none;
-            color: #9ca3af;
-            font-size: 18px;
-            padding: 0;
-            width: 20px;
-            height: 20px;
-        }
-
-        .add-btn:hover {
-            color: #2563eb;
-        }
-
-        .add-btn:disabled {
-            color: #d1d5db;
-            cursor: not-allowed;
-        }
-
-        .events-list {
-            flex: 1;
-            overflow-y: auto;
-            max-height: 80px;
-        }
-
-        .event-item {
-            font-size: 11px;
-            padding: 4px 6px;
-            border-radius: 4px;
-            margin-bottom: 4px;
-            cursor: pointer;
-            position: relative;
-            border-left: 3px solid;
-        }
-
-        .event-item:hover .event-actions {
-            display: flex;
-        }
-
-        .event-title {
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .event-time {
-            color: #6b7280;
-            font-size: 10px;
-        }
-
-        .event-actions {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: white;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-            border-radius: 4px;
-            padding: 2px;
-            display: none;
-            gap: 4px;
-        }
-
-        .event-actions button {
-            padding: 4px;
-            font-size: 12px;
-            background: none;
-        }
-
-        .edit-btn {
-            color: #2563eb;
-        }
-
-        .edit-btn:hover {
-            background: #eff6ff;
-        }
-
-        .delete-btn {
-            color: #ef4444;
-        }
-
-        .delete-btn:hover {
-            background: #fef2f2;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 500px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-header h3 {
-            font-size: 24px;
-            color: #1f2937;
-        }
-
-        .close-btn {
-            background: none;
-            color: #9ca3af;
-            font-size: 24px;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-        }
-
-        .close-btn:hover {
-            color: #6b7280;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 10px;
-            font-size: 14px;
-            font-family: inherit;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .color-picker {
-            display: flex;
-            gap: 10px;
-        }
-
-        .color-option {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .color-option.selected {
-            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 25px;
-        }
-
-        .btn-save {
-            flex: 1;
-            background: #2563eb;
-            color: white;
-            padding: 12px 20px;
-            font-size: 16px;
-        }
-
-        .btn-save:hover {
-            background: #1d4ed8;
-        }
-
-        .btn-cancel {
-            padding: 12px 20px;
-            background: white;
-            border: 1px solid #d1d5db;
-            color: #374151;
-        }
-
-        .btn-cancel:hover {
-            background: #f9fafb;
-        }
-
-        .info-box {
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 15px;
-        }
-
-        .info-box p {
-            color: #1e40af;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .warning-box {
-            background: #fef3c7;
-            border: 1px solid #fcd34d;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-
-        .warning-box p {
-            color: #92400e;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px;
-            font-size: 20px;
-            color: #6b7280;
-        }
-
-        .locked-message {
-            text-align: center;
-            padding: 40px;
-            background: #fef2f2;
-            border: 2px solid #fecaca;
-            border-radius: 15px;
-            margin: 20px;
-        }
-
-        .locked-message h2 {
-            color: #991b1b;
-            margin-bottom: 10px;
-        }
-
-        .locked-message p {
-            color: #7f1d1d;
-            font-size: 16px;
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                gap: 15px;
-            }
-
-            .day-cell {
-                font-size: 12px;
-                padding: 5px;
-            }
-
-            .events-list {
-                max-height: 50px;
-            }
-        }
-    </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>4AM Event</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+/* Responsive, professional styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+:root{
+  --bg:#f6f8fb; --card:#fff; --muted:#6b7280;
+  --accent-1:#4f46e5; --accent-2:#06b6d4; --accent-grad: linear-gradient(135deg,var(--accent-1),var(--accent-2));
+  --shadow: 0 8px 30px rgba(15,23,42,0.08); --danger:#ef4444;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:#0f172a;-webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;padding-bottom:40px;
+}
+
+/* Header */
+header{
+  display:flex;align-items:center;justify-content:space-between;padding:14px;max-width:1100px;margin:18px auto;
+  background:linear-gradient(180deg,#fff,#fbfdff);border-radius:12px;box-shadow:var(--shadow);
+}
+.title{display:flex;gap:12px;align-items:center}
+.logo{width:44px;height:44px;border-radius:10px;background:var(--accent-grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+.controls{display:flex;gap:8px;align-items:center}
+button{border:0;background:transparent;padding:8px 10px;border-radius:10px;cursor:pointer}
+.btn{background:var(--card);border:1px solid #eef2ff;padding:8px 12px;border-radius:10px;color:var(--accent-1)}
+.btn-primary{background:var(--accent-grad);color:#fff;padding:8px 12px;border-radius:10px}
+.small{font-size:13px;color:var(--muted)}
+
+/* Calendar */
+#calendar{max-width:1100px;margin:18px auto;padding:12px;display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
+.weekday{font-size:12px;color:var(--muted);text-align:center}
+.day{background:linear-gradient(180deg,#fff,#fbfdff);min-height:110px;padding:12px;border-radius:12px;display:flex;flex-direction:column;gap:8px;cursor:pointer;box-shadow:0 6px 18px rgba(2,6,23,0.04)}
+.day.empty{background:transparent;cursor:default;box-shadow:none}
+.date{font-weight:700}
+.events{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+.eventDot{display:inline-block;padding:6px 8px;border-radius:10px;color:#fff;background:linear-gradient(90deg,var(--accent-1),var(--accent-2));font-size:12px}
+
+/* Admin side panel */
+.panel{position:fixed;right:20px;top:110px;width:360px;background:linear-gradient(180deg,#fff,#fbfdff);padding:14px;border-radius:16px;box-shadow:0 20px 60px rgba(2,6,23,0.12);display:none;z-index:40}
+.panel.show{display:block}
+.form-row{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+input[type="text"],textarea,input[type="password"]{width:100%;padding:10px;border-radius:10px;border:1px solid #eef2ff}
+textarea{min-height:90px;resize:vertical}
+
+/* Modal backdrop and container */
+.modal-backdrop{position:fixed;inset:0;background:linear-gradient(180deg, rgba(2,6,23,0.45), rgba(2,6,23,0.35));display:none;align-items:center;justify-content:center;z-index:60;}
+.modal-backdrop.show{display:flex}
+.modal{width:92%;max-width:520px;border-radius:16px;padding:18px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:0 30px 80px rgba(2,6,23,0.28);border:1px solid rgba(255,255,255,0.6);display:flex;flex-direction:column;gap:12px}
+
+/* Token login layout */
+.token-grid{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.token-grid .note{grid-column:1 / -1;color:var(--muted);font-size:13px}
+.token-actions{display:flex;gap:8px;justify-content:flex-end}
+.token-actions .btn{min-width:88px}
+@media (max-width:520px){
+  .modal{padding:14px;border-radius:12px}
+  .token-grid{grid-template-columns:1fr;gap:10px}
+  .token-actions{flex-direction:column-reverse;align-items:stretch}
+  .token-actions .btn{width:100%}
+}
+
+/* Event details modal */
+.event-modal{width:92%;max-width:820px;border-radius:14px;padding:16px;background:#fff;max-height:86vh;overflow:auto}
+.event-card{border-radius:12px;padding:14px;margin-bottom:12px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:0 12px 30px rgba(2,6,23,0.06)}
+.footer-row{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+
+/* Responsive adjustments */
+@media(max-width:820px){
+  .panel{display:none}
+  #calendar{padding:8px;gap:8px}
+  .day{min-height:90px;padding:10px}
+}
+</style>
 </head>
 <body>
-    <div id="loading" class="loading">Loading events...</div>
-    
-    <div id="app" class="container" style="display: none;">
-        <div class="header">
-            <div class="header-left">
-                <span style="font-size: 32px;">📅</span>
-                <h1>Event Planner</h1>
-            </div>
-            <div class="user-section" id="userSection">
-                <!-- User info will be inserted here -->
-            </div>
-        </div>
+<header>
+  <div class="title">
+    <div class="logo">EP</div>
+    <div>
+      <div style="font-weight:700">Event Planner</div>
+      <!--<div class="small">Repo fixed to page-host/panda-homepage/events.json</div>-->
+    </div>
+  </div>
 
-        <div class="month-nav">
-            <button onclick="changeMonth(-1)">← Previous</button>
-            <h2 id="monthYear"></h2>
-            <button onclick="changeMonth(1)">Next →</button>
-        </div>
+  <div class="controls">
+    <button id="prev" class="btn">◀</button>
+    <div id="monthLabel" class="small"></div>
+    <button id="next" class="btn">▶</button>
+    <button id="adminBtn" class="btn-primary">Admin Login</button>
+  </div>
+</header>
 
-        <div class="calendar">
-            <div class="day-names">
-                <div class="day-name">Sun</div>
-                <div class="day-name">Mon</div>
-                <div class="day-name">Tue</div>
-                <div class="day-name">Wed</div>
-                <div class="day-name">Thu</div>
-                <div class="day-name">Fri</div>
-                <div class="day-name">Sat</div>
-            </div>
-            <div class="days-grid" id="daysGrid"></div>
-        </div>
+<main>
+  <div id="calendar"></div>
+
+  <aside id="panel" class="panel" aria-hidden="true">
+    <h3 id="dayTitlePanel"></h3>
+
+    <ul id="eventsListPanel"></ul>
+
+    <div id="addSection" class="form-row">
+      <input id="eventTitle" type="text" placeholder="Event title" />
+      <textarea id="eventDesc" placeholder="Event description (details, location, time, etc.)"></textarea>
     </div>
 
-    <!-- Login Modal -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>🔐 Admin Login</h3>
-                <button class="close-btn" onclick="closeLoginModal()">×</button>
-            </div>
-            <div id="loginContent">
-                <div class="form-group">
-                    <label>Admin Username</label>
-                    <input type="text" id="usernameInput" placeholder="Enter admin username">
-                </div>
-                <div class="warning-box">
-                    <p><strong>⚠️ Important:</strong> The first person to login becomes the permanent admin. Only the admin can add, edit, or delete events. This action cannot be undone!</p>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-save" onclick="handleLogin()">🔑 Become Admin</button>
-                    <button class="btn-cancel" onclick="closeLoginModal()">Cancel</button>
-                </div>
-            </div>
-            <div id="lockedContent" style="display: none;">
-                <div class="locked-message">
-                    <h2>🔒 Calendar Locked</h2>
-                    <p>This calendar is already being managed by an admin. Only the admin can make changes to events.</p>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="closeLoginModal()" style="width: 100%;">Close</button>
-                </div>
-            </div>
-        </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button id="addEvent" class="btn-primary">Add Event</button>
+      <button id="closePanel" class="btn">Close</button>
     </div>
 
-    <!-- Event Modal -->
-    <div id="eventModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="eventModalTitle">Add Event</h3>
-                <button class="close-btn" onclick="closeEventModal()">×</button>
-            </div>
-            <div class="form-group">
-                <label>Event Title *</label>
-                <input type="text" id="eventTitle" placeholder="Enter event title">
-            </div>
-            <div class="form-group">
-                <label>Time</label>
-                <input type="time" id="eventTime">
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="eventDescription" rows="3" placeholder="Add event details"></textarea>
-            </div>
-            <div class="form-group">
-                <label>Color</label>
-                <div class="color-picker" id="colorPicker"></div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn-save" onclick="saveEvent()">💾 <span id="saveButtonText">Add Event</span></button>
-                <button class="btn-cancel" onclick="closeEventModal()">Cancel</button>
-            </div>
-        </div>
+    <div style="margin-top:12px">
+      <div class="small" id="adminNotice">Only admin can add, edit, or delete events</div>
+      <div class="small" style="margin-top:6px">Admin mode: <strong id="adminState">off</strong></div>
+      <div class="small" style="margin-top:6px" id="githubStatus">GitHub: not connected (repo fixed)</div>
+      <div class="small" style="margin-top:6px;color:var(--muted)">Repo: <strong>page-host/panda-homepage/events.json</strong></div>
+    </div>
+  </aside>
+</main>
+
+<!-- Event details modal -->
+<div id="eventModalBackdrop" class="modal-backdrop" aria-hidden="true">
+  <div class="event-modal" role="dialog" aria-modal="true">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div id="eventModalDate" style="font-weight:700"></div>
+        <div class="small" id="modalSub">Click an event to read details</div>
+      </div>
+      <div>
+        <button id="modalAdd" class="btn-primary">Add (admin)</button>
+        <button id="modalClose" class="btn">Close</button>
+      </div>
     </div>
 
-    <!-- Reset Admin Modal -->
-    <div id="resetModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⚠️ Reset Admin Access</h3>
-                <button class="close-btn" onclick="closeResetModal()">×</button>
-            </div>
-            <div class="warning-box">
-                <p><strong>Warning:</strong> This will remove your admin access and delete ALL events. This action cannot be undone!</p>
-            </div>
-            <div class="form-group">
-                <label>Type "RESET" to confirm</label>
-                <input type="text" id="resetConfirmInput" placeholder="Type RESET">
-            </div>
-            <div class="modal-actions">
-                <button class="btn-danger" onclick="confirmReset()">🗑️ Reset Everything</button>
-                <button class="btn-cancel" onclick="closeResetModal()">Cancel</button>
-            </div>
-        </div>
+    <div id="eventModalList"></div>
+
+    <div class="footer-row">
+      <div class="small" id="modalAdminNote"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Token login modal (responsive) -->
+<div id="tokenModalBackdrop" class="modal-backdrop" aria-hidden="true">
+  <div class="modal" role="document" aria-labelledby="tokenLoginTitle">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+      <div>
+        <h3 id="tokenLoginTitle" style="margin:0">Admin Login — GitHub Token</h3>
+        <div class="small" style="margin-top:6px">Paste a GitHub Personal Access Token (session-only). Token needs public_repo or repo scope.</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="tokenCancel" class="btn">Cancel</button>
+      </div>
     </div>
 
-    <script>
-        // Global state
-        let currentDate = new Date();
-        let events = {};
-        let adminUsername = null;
-        let selectedDate = null;
-        let editingEventIndex = null;
+    <div class="token-grid" style="margin-top:12px">
+      <label for="tokenInput" class="small">Personal Access Token</label>
+      <input id="tokenInput" type="password" placeholder="ghp_xxx..." autocomplete="one-time-code" />
+      <div class="note" style="margin-top:6px">Token is stored in session only and cleared when you close the tab or logout.</div>
+      <div class="token-actions" style="margin-top:6px">
+        <button id="tokenSubmit" class="btn-primary">Connect</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-        const colors = [
-            { name: 'Blue', value: '#3b82f6' },
-            { name: 'Green', value: '#10b981' },
-            { name: 'Red', value: '#ef4444' },
-            { name: 'Purple', value: '#8b5cf6' },
-            { name: 'Orange', value: '#f97316' },
-            { name: 'Pink', value: '#ec4899' }
-        ];
+<script>
+/* ===========================
+   Configuration (edit here)
+   ===========================
+   - Repo is fixed below: GITHUB_OWNER / GITHUB_REPO / GITHUB_PATH
+   - COMMITTER_NAME / COMMITTER_EMAIL are optional commit identity.
+*/
+const GITHUB_OWNER = 'page-host';
+const GITHUB_REPO  = 'panda-homepage';
+const GITHUB_PATH  = 'events.json';
+const COMMITTER_NAME = 'Event Planner';
+const COMMITTER_EMAIL = 'noreply@example.com';
+/* ===========================
+   End configuration
+   =========================== */
 
-        let selectedColor = colors[0].value;
+/* Elements */
+const monthLabel = document.getElementById('monthLabel'), cal = document.getElementById('calendar');
+const panel = document.getElementById('panel'), dayTitlePanel = document.getElementById('dayTitlePanel'), eventsListPanel = document.getElementById('eventsListPanel');
+const addSection = document.getElementById('addSection'), eventTitle = document.getElementById('eventTitle'), eventDesc = document.getElementById('eventDesc');
+const addEvent = document.getElementById('addEvent'), closePanel = document.getElementById('closePanel');
+const prev = document.getElementById('prev'), next = document.getElementById('next'), adminBtn = document.getElementById('adminBtn');
+const adminState = document.getElementById('adminState'), adminNotice = document.getElementById('adminNotice'), githubStatus = document.getElementById('githubStatus');
 
-        // Initialize
-        async function init() {
-            await loadAdmin();
-            await loadEvents();
-            renderColorPicker();
-            renderCalendar();
-            updateUserSection();
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('app').style.display = 'block';
+const eventModalBackdrop = document.getElementById('eventModalBackdrop'), eventModalDate = document.getElementById('eventModalDate'), eventModalList = document.getElementById('eventModalList');
+const modalClose = document.getElementById('modalClose'), modalAdd = document.getElementById('modalAdd'), modalAdminNote = document.getElementById('modalAdminNote');
+
+const tokenModalBackdrop = document.getElementById('tokenModalBackdrop'), tokenInput = document.getElementById('tokenInput');
+const tokenSubmit = document.getElementById('tokenSubmit'), tokenCancel = document.getElementById('tokenCancel');
+
+let adminMode = sessionStorage.getItem('isAdmin') === 'true';
+let viewDate = new Date();
+
+/* Token handling: stored only in sessionStorage for this session */
+function setSessionToken(token){
+  if(token) sessionStorage.setItem('gh_token_session', token);
+  else sessionStorage.removeItem('gh_token_session');
+}
+function getSessionToken(){ return sessionStorage.getItem('gh_token_session') || ''; }
+
+/* Local events storage helpers */
+function saveLocalEvents(events){ localStorage.setItem('events_local', JSON.stringify(events)); }
+function loadLocalEvents(){ return JSON.parse(localStorage.getItem('events_local') || '{}'); }
+
+/* GitHub API helpers (fixed repo) */
+async function fetchEventsFromGitHub(token){
+  const owner = GITHUB_OWNER, repo = GITHUB_REPO, path = GITHUB_PATH;
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+  const res = await fetch(url, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }});
+  if(res.status === 200){
+    const j = await res.json();
+    const content = atob(j.content.replace(/\n/g,'')); // decode base64
+    return { json: JSON.parse(content), sha: j.sha };
+  } else {
+    // return the response for diagnostics if needed
+    return null;
+  }
+}
+
+async function pushEventsToGitHub(token, eventsObj, currentSha){
+  const owner = GITHUB_OWNER, repo = GITHUB_REPO, path = GITHUB_PATH;
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+  const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(eventsObj, null, 2))));
+  const body = {
+    message: currentSha ? `Update events ${new Date().toISOString()}` : `Create events ${new Date().toISOString()}`,
+    content: contentBase64,
+    committer: { name: COMMITTER_NAME, email: COMMITTER_EMAIL }
+  };
+  if(currentSha) body.sha = currentSha;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const text = await res.text();
+    throw new Error(`GitHub API error ${res.status}: ${text}`);
+  }
+  return await res.json();
+}
+
+/* UI rendering */
+function renderMonth(d = new Date()){
+  cal.innerHTML = '';
+  const year = d.getFullYear(), m = d.getMonth();
+  monthLabel.textContent = d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+  const daysInMonth = new Date(year, m + 1, 0).getDate();
+  const firstDay = new Date(year, m, 1).getDay();
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(w => { const el = document.createElement('div'); el.className = 'weekday'; el.textContent = w; cal.appendChild(el) });
+  for(let i=0;i<firstDay;i++){ const e = document.createElement('div'); e.className='day empty'; cal.appendChild(e) }
+  const events = loadLocalEvents();
+  for(let day=1; day<=daysInMonth; day++){
+    const cell = document.createElement('div'); cell.className='day';
+    const iso = `${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    cell.dataset.date = iso;
+    cell.innerHTML = `<div class="date">${day}</div><div class="events"></div>`;
+    const evs = events[iso] || [];
+    if(evs.length) cell.querySelector('.events').innerHTML = evs.map(e => `<span class="eventDot">${escapeHtml(e.title)}</span>`).join('');
+    cell.addEventListener('click', () => onDayClick(iso));
+    cal.appendChild(cell);
+  }
+}
+
+/* Day click behavior */
+function onDayClick(date){
+  const evs = loadLocalEvents()[date] || [];
+  if(evs.length === 0){
+    if(adminMode){
+      openPanel(date);
+    }
+    return;
+  }
+  openEventModal(date);
+}
+
+/* Side panel (admin) */
+function openPanel(date){
+  panel.classList.add('show'); panel.dataset.date = date;
+  dayTitlePanel.textContent = new Date(date).toDateString();
+  renderEventsPanel();
+  updateAddSectionVisibility();
+}
+function renderEventsPanel(){
+  const date = panel.dataset.date; const evs = loadLocalEvents()[date] || [];
+  eventsListPanel.innerHTML = '';
+  if(evs.length === 0){
+    const li = document.createElement('li'); li.innerHTML = `<div class="small">No events for this day.</div>`; eventsListPanel.appendChild(li);
+  } else {
+    evs.forEach((ev,i) => {
+      const li = document.createElement('li');
+      const left = document.createElement('div');
+      left.innerHTML = `<div style="font-weight:700">${escapeHtml(ev.title)}</div><div class="eventText">${escapeHtml(ev.description)}</div>`;
+      const actions = document.createElement('div'); actions.className = 'event-actions';
+      if(adminMode){
+        const e = document.createElement('button'); e.textContent = 'Edit'; e.className='btn'; e.onclick = ()=>editEvent(date,i);
+        const d = document.createElement('button'); d.textContent = 'Delete'; d.className='btn'; d.onclick = ()=>{ if(confirm('Delete this event?')){ deleteEvent(date,i) } };
+        actions.appendChild(e); actions.appendChild(d);
+      }
+      li.appendChild(left); li.appendChild(actions); eventsListPanel.appendChild(li);
+    });
+  }
+}
+
+/* Event modal */
+function openEventModal(date){
+  const evs = loadLocalEvents()[date] || [];
+  eventModalDate.textContent = new Date(date).toDateString();
+  eventModalList.innerHTML = '';
+  if(evs.length === 0){
+    eventModalList.innerHTML = '<div class="small">No events for this day.</div>';
+  } else {
+    evs.forEach((ev,i) => {
+      const card = document.createElement('div'); card.className = 'event-card';
+      const title = document.createElement('div'); title.className = 'title'; title.textContent = ev.title;
+      const desc = document.createElement('div'); desc.className = 'desc'; desc.textContent = ev.description || '';
+      const actions = document.createElement('div'); actions.className = 'event-actions';
+      if(adminMode){
+        const editBtn = document.createElement('button'); editBtn.textContent = 'Edit'; editBtn.className='btn'; editBtn.onclick = ()=>{ eventModalBackdrop.classList.remove('show'); editEvent(date,i); };
+        const delBtn = document.createElement('button'); delBtn.textContent = 'Delete'; delBtn.className='btn'; delBtn.onclick = ()=>{ if(confirm('Delete this event?')){ deleteEvent(date,i); eventModalBackdrop.classList.remove('show'); } };
+        actions.appendChild(editBtn); actions.appendChild(delBtn);
+      }
+      card.appendChild(title); card.appendChild(desc); card.appendChild(actions);
+      eventModalList.appendChild(card);
+    });
+  }
+  modalAdminNote.textContent = adminMode ? 'You are viewing as admin.' : 'Viewing only. Login as admin to modify.';
+  modalAdd.style.display = adminMode ? 'inline-block' : 'none';
+  eventModalBackdrop.classList.add('show'); eventModalBackdrop.setAttribute('aria-hidden','false');
+  eventModalBackdrop.dataset.date = date;
+}
+
+/* Add/Edit/Delete (admin) */
+addEvent.onclick = async ()=>{
+  if(!adminMode) return alert('Only admin can add events');
+  const date = panel.dataset.date;
+  await addEventToDate(date);
+}
+modalAdd.onclick = ()=>{
+  if(!adminMode) return alert('Only admin can add events');
+  const date = eventModalBackdrop.dataset.date;
+  openPanel(date);
+  eventTitle.focus();
+  eventModalBackdrop.classList.remove('show');
+}
+
+async function addEventToDate(date){
+  const title = eventTitle.value.trim(); const description = eventDesc.value.trim();
+  if(!title) return alert('Enter title');
+  const all = loadLocalEvents(); all[date] = all[date] || []; all[date].push({title,description});
+  saveLocalEvents(all);
+  renderMonth(viewDate); renderEventsPanel();
+  await tryPushToGitHub(all);
+}
+
+function editEvent(date,i){
+  if(!adminMode) return alert('Only admin can edit events');
+  const all = loadLocalEvents(); const ev = all[date][i];
+  const t = prompt('Edit title', ev.title); if(t===null) return;
+  const d = prompt('Edit description', ev.description); if(d===null) return;
+  all[date][i] = {title: t, description: d}; saveLocalEvents(all); renderMonth(viewDate); renderEventsPanel();
+  tryPushToGitHub(all);
+}
+function deleteEvent(date,i){
+  if(!adminMode) return alert('Only admin can delete events');
+  const all = loadLocalEvents(); all[date].splice(i,1); if(!all[date].length) delete all[date]; saveLocalEvents(all); renderMonth(viewDate); renderEventsPanel();
+  tryPushToGitHub(all);
+}
+
+/* Close handlers */
+modalClose.onclick = ()=>{ eventModalBackdrop.classList.remove('show'); eventModalBackdrop.setAttribute('aria-hidden','true'); }
+closePanel.onclick = ()=>panel.classList.remove('show')
+
+/* Navigation */
+prev.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()-1, 1); renderMonth(viewDate) }
+next.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()+1, 1); renderMonth(viewDate) }
+
+/* Admin login via token only (no password) */
+adminBtn.onclick = async ()=>{
+  if(adminMode){
+    // logout
+    adminMode=false; sessionStorage.removeItem('isAdmin'); adminBtn.textContent='Admin Login'; updateAddSectionVisibility(); renderEventsPanel(); setSessionToken(''); githubStatus.textContent = 'GitHub: not connected (repo fixed)'; return;
+  }
+  // open token modal
+  tokenInput.value = '';
+  tokenModalBackdrop.classList.add('show'); tokenModalBackdrop.setAttribute('aria-hidden','false');
+  tokenInput.focus();
+};
+
+tokenCancel.onclick = ()=>{ tokenModalBackdrop.classList.remove('show'); tokenModalBackdrop.setAttribute('aria-hidden','true'); }
+
+/* When user submits token: validate by attempting to read the repo contents or repo metadata */
+tokenSubmit.onclick = async ()=>{
+  const token = tokenInput.value.trim();
+  if(!token) return alert('Paste a GitHub Personal Access Token (PAT).');
+  tokenModalBackdrop.classList.remove('show'); tokenModalBackdrop.setAttribute('aria-hidden','true');
+  // validate token by calling the contents endpoint for the fixed path; if 200 or 404 (file missing) but auth ok, accept
+  try{
+    const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
+    const repoRes = await fetch(url, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }});
+    if(repoRes.status === 200){
+      // token can access repo metadata; accept as admin
+      setSessionToken(token);
+      adminMode = true; sessionStorage.setItem('isAdmin','true'); adminBtn.textContent='Logout Admin';
+      updateAddSectionVisibility();
+      githubStatus.textContent = `GitHub: connected (session) to ${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_PATH}`;
+      // try to pull events.json if exists
+      try{
+        const res = await fetchEventsFromGitHub(token);
+        if(res && res.json){
+          saveLocalEvents(res.json);
+          localStorage.setItem('gh_sha', res.sha);
+          renderMonth(viewDate);
+          alert('Connected and pulled events from GitHub (if file existed).');
+        } else {
+          alert('Connected. No events file found in repo (will create on first push).');
         }
+      }catch(err){
+        alert('Connected but pull failed: ' + err.message);
+      }
+    } else if(repoRes.status === 401 || repoRes.status === 403){
+      throw new Error('Token rejected (401/403). Check token scope and validity.');
+    } else {
+      const txt = await repoRes.text();
+      throw new Error(`Unexpected response ${repoRes.status}: ${txt.slice(0,200)}`);
+    }
+  }catch(err){
+    setSessionToken('');
+    adminMode = false;
+    alert('Token validation failed: ' + err.message);
+    githubStatus.textContent = 'GitHub: not connected (repo fixed)';
+  }
+};
 
-        async function loadAdmin() {
-            try {
-                const result = await window.storage.get('calendar-admin', true);
-                if (result) {
-                    adminUsername = result.value;
-                }
-            } catch (error) {
-                console.log('No admin set yet');
-            }
-        }
+/* Pull helper */
+async function pullFromGitHubSession(){
+  const token = getSessionToken();
+  if(!token) throw new Error('No session token. Login and paste token.');
+  const res = await fetchEventsFromGitHub(token);
+  if(res && res.json){
+    saveLocalEvents(res.json);
+    localStorage.setItem('gh_sha', res.sha);
+    renderMonth(viewDate);
+    return true;
+  } else {
+    return false;
+  }
+}
 
-        async function saveAdmin(username) {
-            try {
-                await window.storage.set('calendar-admin', username, true);
-                adminUsername = username;
-            } catch (error) {
-                console.error('Error saving admin:', error);
-                alert('Failed to set admin. Please try again.');
-            }
-        }
+/* Push helper */
+async function tryPushToGitHub(eventsObj){
+  const token = getSessionToken();
+  if(!token){
+    githubStatus.textContent = 'GitHub: not connected (no session token)';
+    return;
+  }
+  githubStatus.textContent = 'GitHub: syncing...';
+  try{
+    const currentSha = localStorage.getItem('gh_sha') || null;
+    const res = await pushEventsToGitHub(token, eventsObj, currentSha);
+    if(res && res.content && res.content.sha){
+      localStorage.setItem('gh_sha', res.content.sha);
+    }
+    githubStatus.textContent = 'GitHub: last sync ' + new Date().toLocaleString();
+  }catch(err){
+    githubStatus.textContent = 'GitHub: sync failed';
+    console.error('GitHub push failed', err);
+    alert('GitHub push failed: ' + err.message);
+  }
+}
 
-        async function loadEvents() {
-            try {
-                const result = await window.storage.get('calendar-events', true);
-                if (result) {
-                    events = JSON.parse(result.value);
-                }
-            } catch (error) {
-                console.log('No existing events found');
-            }
-        }
+/* Utility: escape HTML */
+function escapeHtml(s){
+  if(!s) return '';
+  return s.replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]) });
+}
 
-        async function saveEvents() {
-            try {
-                await window.storage.set('calendar-events', JSON.stringify(events), true);
-            } catch (error) {
-                console.error('Error saving events:', error);
-                alert('Failed to save event. Please try again.');
-            }
-        }
+/* Initialize */
+(async function init(){
+  updateAddSectionVisibility();
+  const token = getSessionToken();
+  if(token){
+    githubStatus.textContent = `GitHub: connected (session) to ${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_PATH}`;
+    try{ await pullFromGitHubSession(); }catch(e){}
+  } else {
+    githubStatus.textContent = 'GitHub: not connected (repo fixed)';
+  }
+  renderMonth(viewDate);
+})();
 
-        function updateUserSection() {
-            const userSection = document.getElementById('userSection');
-            if (adminUsername) {
-                userSection.innerHTML = `
-                    <div class="user-info">
-                        <span>👤</span>
-                        <span>${adminUsername}</span>
-                        <span class="admin-badge">ADMIN</span>
-                    </div>
-                    <button class="btn-primary" onclick="showResetModal()">🔄 Reset Admin</button>
-                `;
-            } else {
-                userSection.innerHTML = `
-                    <button class="btn-primary" onclick="showLoginModal()">🔑 Claim Admin Access</button>
-                `;
-            }
-        }
-
-        function showLoginModal() {
-            if (adminUsername) {
-                // Show locked message
-                document.getElementById('loginContent').style.display = 'none';
-                document.getElementById('lockedContent').style.display = 'block';
-            } else {
-                // Show login form
-                document.getElementById('loginContent').style.display = 'block';
-                document.getElementById('lockedContent').style.display = 'none';
-            }
-            document.getElementById('loginModal').classList.add('active');
-            document.getElementById('usernameInput').focus();
-        }
-
-        function closeLoginModal() {
-            document.getElementById('loginModal').classList.remove('active');
-            document.getElementById('usernameInput').value = '';
-        }
-
-        async function handleLogin() {
-            const username = document.getElementById('usernameInput').value.trim();
-            if (!username) {
-                alert('Please enter a username');
-                return;
-            }
-
-            if (adminUsername) {
-                alert('Admin already exists! Only the current admin can reset access.');
-                return;
-            }
-
-            await saveAdmin(username);
-            updateUserSection();
-            closeLoginModal();
-            alert(`Welcome, Admin ${username}! You now have full control over this calendar.`);
-        }
-
-        function showResetModal() {
-            document.getElementById('resetModal').classList.add('active');
-            document.getElementById('resetConfirmInput').focus();
-        }
-
-        function closeResetModal() {
-            document.getElementById('resetModal').classList.remove('active');
-            document.getElementById('resetConfirmInput').value = '';
-        }
-
-        async function confirmReset() {
-            const confirmText = document.getElementById('resetConfirmInput').value;
-            if (confirmText !== 'RESET') {
-                alert('Please type "RESET" exactly to confirm');
-                return;
-            }
-
-            if (!confirm('Are you absolutely sure? This will delete everything!')) {
-                return;
-            }
-
-            try {
-                // Delete admin
-                await window.storage.delete('calendar-admin', true);
-                adminUsername = null;
-
-                // Delete all events
-                await window.storage.delete('calendar-events', true);
-                events = {};
-
-                closeResetModal();
-                updateUserSection();
-                renderCalendar();
-                alert('Admin access and all events have been reset. Anyone can now claim admin access.');
-            } catch (error) {
-                console.error('Error resetting:', error);
-                alert('Failed to reset. Please try again.');
-            }
-        }
-
-        function changeMonth(offset) {
-            currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1);
-            renderCalendar();
-        }
-
-        function getDateKey(day) {
-            return `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}-${day}`;
-        }
-
-        function renderCalendar() {
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                'July', 'August', 'September', 'October', 'November', 'December'];
-            
-            document.getElementById('monthYear').textContent = 
-                `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-
-            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            const startingDayOfWeek = firstDay.getDay();
-
-            const daysGrid = document.getElementById('daysGrid');
-            daysGrid.innerHTML = '';
-
-            // Empty cells before first day
-            for (let i = 0; i < startingDayOfWeek; i++) {
-                const emptyCell = document.createElement('div');
-                daysGrid.appendChild(emptyCell);
-            }
-
-            // Days of month
-            const today = new Date();
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayCell = document.createElement('div');
-                dayCell.className = 'day-cell';
-
-                const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-                if (cellDate.toDateString() === today.toDateString()) {
-                    dayCell.classList.add('today');
-                }
-
-                const dateKey = getDateKey(day);
-                const dayEvents = events[dateKey] || [];
-
-                const canEdit = adminUsername !== null;
-
-                dayCell.innerHTML = `
-                    <div class="day-header">
-                        <span class="day-number">${day}</span>
-                        <button class="add-btn" onclick="openAddEventModal(${day})" ${!canEdit ? 'disabled' : ''}>+</button>
-                    </div>
-                    <div class="events-list" id="events-${day}"></div>
-                `;
-
-                daysGrid.appendChild(dayCell);
-
-                // Render events for this day
-                renderDayEvents(day, dayEvents);
-            }
-        }
-
-        function renderDayEvents(day, dayEvents) {
-            const eventsContainer = document.getElementById(`events-${day}`);
-            eventsContainer.innerHTML = '';
-
-            dayEvents.forEach((event, index) => {
-                const canEdit = adminUsername !== null;
-                const eventDiv = document.createElement('div');
-                eventDiv.className = 'event-item';
-                eventDiv.style.backgroundColor = event.color + '33';
-                eventDiv.style.borderLeftColor = event.color;
-
-                eventDiv.innerHTML = `
-                    <div class="event-title" style="color: ${event.color}">
-                        ${event.title}
-                    </div>
-                    ${event.time ? `<div class="event-time">⏰ ${event.time}</div>` : ''}
-                    ${canEdit ? `
-                        <div class="event-actions">
-                            <button class="edit-btn" onclick="editEvent(${day}, ${index})">✏️</button>
-                            <button class="delete-btn" onclick="deleteEvent(${day}, ${index})">🗑️</button>
-                        </div>
-                    ` : ''}
-                `;
-
-                eventsContainer.appendChild(eventDiv);
-            });
-        }
-
-        function openAddEventModal(day) {
-            if (!adminUsername) {
-                alert('Only the admin can add events. Please claim admin access first.');
-                showLoginModal();
-                return;
-            }
-            selectedDate = day;
-            editingEventIndex = null;
-            document.getElementById('eventModalTitle').textContent = 'Add Event';
-            document.getElementById('saveButtonText').textContent = 'Add Event';
-            document.getElementById('eventTitle').value = '';
-            document.getElementById('eventTime').value = '';
-            document.getElementById('eventDescription').value = '';
-            selectedColor = colors[0].value;
-            updateColorPicker();
-            document.getElementById('eventModal').classList.add('active');
-        }
-
-        function editEvent(day, index) {
-            if (!adminUsername) {
-                alert('Only the admin can edit events.');
-                return;
-            }
-
-            const dateKey = getDateKey(day);
-            const event = events[dateKey][index];
-
-            selectedDate = day;
-            editingEventIndex = index;
-            document.getElementById('eventModalTitle').textContent = 'Edit Event';
-            document.getElementById('saveButtonText').textContent = 'Update Event';
-            document.getElementById('eventTitle').value = event.title;
-            document.getElementById('eventTime').value = event.time || '';
-            document.getElementById('eventDescription').value = event.description || '';
-            selectedColor = event.color;
-            updateColorPicker();
-            document.getElementById('eventModal').classList.add('active');
-        }
-
-        async function deleteEvent(day, index) {
-            if (!adminUsername) {
-                alert('Only the admin can delete events.');
-                return;
-            }
-
-            if (!confirm('Are you sure you want to delete this event?')) return;
-
-            const dateKey = getDateKey(day);
-            events[dateKey].splice(index, 1);
-            if (events[dateKey].length === 0) {
-                delete events[dateKey];
-            }
-
-            await saveEvents();
-            renderCalendar();
-        }
-
-        async function saveEvent() {
-            const title = document.getElementById('eventTitle').value.trim();
-            if (!title) {
-                alert('Please enter an event title');
-                return;
-            }
-
-            const eventData = {
-                title: title,
-                time: document.getElementById('eventTime').value,
-                description: document.getElementById('eventDescription').value,
-                color: selectedColor
-            };
-
-            const dateKey = getDateKey(selectedDate);
-
-            if (editingEventIndex !== null) {
-                events[dateKey][editingEventIndex] = eventData;
-            } else {
-                if (!events[dateKey]) {
-                    events[dateKey] = [];
-                }
-                events[dateKey].push(eventData);
-            }
-
-            await saveEvents();
-            renderCalendar();
-            closeEventModal();
-        }
-
-        function closeEventModal() {
-            document.getElementById('eventModal').classList.remove('active');
-        }
-
-        function renderColorPicker() {
-            const colorPicker = document.getElementById('colorPicker');
-            colorPicker.innerHTML = colors.map(color => 
-                `<button class="color-option" style="background-color: ${color.value}" 
-                        onclick="selectColor('${color.value}')" 
-                        data-color="${color.value}"></button>`
-            ).join('');
-            updateColorPicker();
-        }
-
-        function selectColor(color) {
-            selectedColor = color;
-            updateColorPicker();
-        }
-
-        function updateColorPicker() {
-            document.querySelectorAll('.color-option').forEach(btn => {
-                if (btn.dataset.color === selectedColor) {
-                    btn.classList.add('selected');
-                } else {
-                    btn.classList.remove('selected');
-                }
-            });
-        }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeEventModal();
-                closeLoginModal();
-                closeResetModal();
-            }
-            if (e.key === 'Enter' && document.getElementById('loginModal').classList.contains('active')) {
-                if (document.getElementById('loginContent').style.display !== 'none') {
-                    handleLogin();
-                }
-            }
-        });
-
-        // Initialize app
-        init();
-    </script>
+/* Update add form visibility based on admin mode */
+function updateAddSectionVisibility(){
+  if(adminMode){
+    addSection.classList.remove('disabled'); addEvent.classList.remove('disabled'); adminNotice.textContent='You are admin. You can add, edit and delete events.';
+    adminState.textContent = 'on';
+  } else {
+    addSection.classList.add('disabled'); addEvent.classList.add('disabled'); adminNotice.textContent='Only admin can add, edit or delete events.';
+    adminState.textContent = 'off';
+  }
+}
+</script>
 </body>
 </html>

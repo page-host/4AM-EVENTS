@@ -3,153 +3,827 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Goods Panda</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
-    <link rel="icon" href="assets/smile.png">
-    <link rel="stylesheet" href="style.css">
+    <title>Event Planner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-left h1 {
+            font-size: 28px;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+        }
+
+        .btn-primary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .month-nav {
+            background: #f9fafb;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .month-nav button {
+            background: white;
+            padding: 10px 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .month-nav button:hover {
+            background: #f3f4f6;
+        }
+
+        .month-nav h2 {
+            font-size: 24px;
+            color: #1f2937;
+        }
+
+        .calendar {
+            padding: 30px;
+        }
+
+        .day-names {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .day-name {
+            text-align: center;
+            font-weight: 600;
+            color: #6b7280;
+            padding: 10px 0;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 10px;
+            background: white;
+            transition: all 0.3s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .day-cell:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .day-cell.today {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 5px;
+        }
+
+        .day-number {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .day-cell.today .day-number {
+            color: #2563eb;
+        }
+
+        .add-btn {
+            background: none;
+            color: #9ca3af;
+            font-size: 18px;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+        }
+
+        .add-btn:hover {
+            color: #2563eb;
+        }
+
+        .events-list {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 80px;
+        }
+
+        .event-item {
+            font-size: 11px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            position: relative;
+            border-left: 3px solid;
+        }
+
+        .event-item:hover .event-actions {
+            display: flex;
+        }
+
+        .event-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .event-time {
+            color: #6b7280;
+            font-size: 10px;
+        }
+
+        .event-owner {
+            color: #6b7280;
+            font-size: 10px;
+        }
+
+        .event-actions {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+            padding: 2px;
+            display: none;
+            gap: 4px;
+        }
+
+        .event-actions button {
+            padding: 4px;
+            font-size: 12px;
+            background: none;
+        }
+
+        .edit-btn {
+            color: #2563eb;
+        }
+
+        .edit-btn:hover {
+            background: #eff6ff;
+        }
+
+        .delete-btn {
+            color: #ef4444;
+        }
+
+        .delete-btn:hover {
+            background: #fef2f2;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            font-size: 24px;
+            color: #1f2937;
+        }
+
+        .close-btn {
+            background: none;
+            color: #9ca3af;
+            font-size: 24px;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .close-btn:hover {
+            color: #6b7280;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 10px;
+        }
+
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .color-option.selected {
+            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        .btn-save {
+            flex: 1;
+            background: #2563eb;
+            color: white;
+            padding: 12px 20px;
+            font-size: 16px;
+        }
+
+        .btn-save:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-cancel {
+            padding: 12px 20px;
+            background: white;
+            border: 1px solid #d1d5db;
+            color: #374151;
+        }
+
+        .btn-cancel:hover {
+            background: #f9fafb;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .info-box p {
+            color: #1e40af;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 20px;
+            color: #6b7280;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .day-cell {
+                font-size: 12px;
+                padding: 5px;
+            }
+
+            .events-list {
+                max-height: 50px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="main">
-        <div class="hide" id="header">
-            <img src="assets/logo.png">
-            <img src="assets/menu-bar.png">
-        </div>
-
-        <div class="led_ad hide">
-            <div id="ph">
-                <h1>Mi LED TV 4A PRO 32</h1>
-                <p>Amet minim mollit non deserunt ullamco est sit aliqua dolor do amet sint. Velit officia consequat duis enim velit mollit. Exercitation veniam consequat sunt nostrud amet.</p>
-                <h3>$1289</h3>
-                <button class="btn">BUY NOW</button>
+    <div id="loading" class="loading">Loading events...</div>
+    
+    <div id="app" class="container" style="display: none;">
+        <div class="header">
+            <div class="header-left">
+                <span style="font-size: 32px;">📅</span>
+                <h1>Event Planner</h1>
             </div>
-            <div id="hero-img">
-                <img src="assets/hero-tv.png">
+            <div class="user-section" id="userSection">
+                <!-- User info will be inserted here -->
             </div>
         </div>
 
-        <div>
-            <div>
-                <h3 id="cat">Categories</h3>
-                <div id="category">
-                    <div class="box" id="box1">
-                        <p>Watch</p>
-                        <img src="assets/category-watch.png">
-                    </div>
-                    <div class="box" id="box2">
-                        <p>Bag</p>
-                        <img src="assets/category-bag.png">
-                    </div>
-                    <div class="box" id="box3">
-                        <p>Shoes</p>
-                        <img src="assets/category-shoe.png">
-                    </div>
-                </div>
-            </div>
-
-            <div>
-
-            </div>
-
-            <div>
-
-            </div>
+        <div class="month-nav">
+            <button onclick="changeMonth(-1)">← Previous</button>
+            <h2 id="monthYear"></h2>
+            <button onclick="changeMonth(1)">Next →</button>
         </div>
 
-        <div class="common" id="shoe-container">
-            <h3>Shoes</h3>
-            <div id="box-container">
-                <div id="shoe1">
-                    <div class="shoe-img">
-                        <img src="assets/shoe-1.png">
-                    </div>
-                    <div class="txt">
-                        <h4 id="title">Reebok Dart Men's Shoes</h4>
-                        <p>Amet minim mollit non deserunt ullamco<p>est sit aliqua dolor do amet sint.</p></p>
-                        <p id="doller">$1289</p>
-                        <button class="sbtn">BUY NOW→</button>
-                    </div>
-                </div>
-
-                <div id="shoe1">
-                    <div class="shoe-img">
-                        <img src="assets/shoe-2.png">
-                    </div>
-                    <div class="txt">
-                        <h4 id="title">Reebok Pump</h4>
-                        <p>Amet minim mollit non deserunt ullamco<p>est sit aliqua dolor do amet sint.</p></p>
-                        <p id="doller">$799</p>
-                        <button class="sbtn">BUY NOW→</button>
-                    </div>
-                </div>
-
-                <div id="shoe1">
-                    <div class="shoe-img">
-                        <img src="assets/shoe-3.png">
-                    </div>
-                    <div class="txt">
-                        <h4 id="title">Reebok All Terrain</h4>
-                        <p>Amet minim mollit non deserunt ullamco<p>est sit aliqua dolor do amet sint.</p></p>
-                        <p id="doller">$1289</p>
-                        <button class="sbtn">BUY NOW→</button>
-                    </div>
-                </div>
+        <div class="calendar">
+            <div class="day-names">
+                <div class="day-name">Sun</div>
+                <div class="day-name">Mon</div>
+                <div class="day-name">Tue</div>
+                <div class="day-name">Wed</div>
+                <div class="day-name">Thu</div>
+                <div class="day-name">Fri</div>
+                <div class="day-name">Sat</div>
             </div>
+            <div class="days-grid" id="daysGrid"></div>
         </div>
-        
-        <div class="common" id="shoe-container">
-            <h3>Backpack</h3>
-            <div id="box-container">
-                <div id="bag1">
-                    <div class="shoe-img">
-                        <img src="assets/bag-1.png">
-                    </div>
-                    <div class="txt">
-                        <h4 id="title">Ison Backpack</h4>
-                        <p>Amet minim mollit non deserunt ullamco<p>est sit aliqua dolor do amet sint.</p></p>
-                        <p id="doller">$1289</p>
-                        <button class="sbtn">BUY NOW→</button>
-                    </div>
-                </div>
+    </div>
 
-                <div id="bag1">
-                    <div class="shoe-img">
-                        <img src="assets/bag-2.png">
-                    </div>
-                    <div class="txt">
-                        <h4 id="title">Biaowang Backpack</h4>
-                        <p>Amet minim mollit non deserunt ullamco<p>est sit aliqua dolor do amet sint.</p></p>
-                        <p id="doller">$799</p>
-                        <button class="sbtn">BUY NOW→</button>
-                    </div>
-                </div>
-
-                <div id="bag1">
-                    <div class="shoe-img">
-                        <img src="assets/bag-3.png">
-                    </div>
-                    <div class="txt">
-                        <h4 id="title">Dxyizu WS54 Smart</h4>
-                        <p>Amet minim mollit non deserunt ullamco<p>est sit aliqua dolor do amet sint.</p></p>
-                        <p id="doller">$1289</p>
-                        <button class="sbtn">BUY NOW→</button>
-                    </div>
-                </div>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Login</h3>
+                <button class="close-btn" onclick="closeLoginModal()">×</button>
             </div>
-        </div>
-
-        <div id="foter">
-            <div id="acc">
-                <h2>LET'S STAY IN TOUCH</h2>
-                <p>Get updates on sales specials and more</p>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="usernameInput" placeholder="Enter your username">
             </div>
-            <div id="em">
-                <input  id="chng" typ="email" placeholder="Enter your email">
-                <button class="btn1">Send</button>
+            <div class="info-box">
+                <p><strong>Note:</strong> Choose a unique username. You'll only be able to edit and delete events that you create.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-save" onclick="handleLogin()">👤 Login</button>
+                <button class="btn-cancel" onclick="closeLoginModal()">Cancel</button>
             </div>
         </div>
     </div>
-</body>
 
+    <!-- Event Modal -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="eventModalTitle">Add Event</h3>
+                <button class="close-btn" onclick="closeEventModal()">×</button>
+            </div>
+            <div class="form-group">
+                <label>Event Title *</label>
+                <input type="text" id="eventTitle" placeholder="Enter event title">
+            </div>
+            <div class="form-group">
+                <label>Time</label>
+                <input type="time" id="eventTime">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="eventDescription" rows="3" placeholder="Add event details"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Color</label>
+                <div class="color-picker" id="colorPicker"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-save" onclick="saveEvent()">💾 <span id="saveButtonText">Add Event</span></button>
+                <button class="btn-cancel" onclick="closeEventModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentDate = new Date();
+        let events = {};
+        let currentUser = null;
+        let selectedDate = null;
+        let editingEventIndex = null;
+
+        const colors = [
+            { name: 'Blue', value: '#3b82f6' },
+            { name: 'Green', value: '#10b981' },
+            { name: 'Red', value: '#ef4444' },
+            { name: 'Purple', value: '#8b5cf6' },
+            { name: 'Orange', value: '#f97316' },
+            { name: 'Pink', value: '#ec4899' }
+        ];
+
+        let selectedColor = colors[0].value;
+
+        // Initialize
+        async function init() {
+            loadUser();
+            await loadEvents();
+            renderColorPicker();
+            renderCalendar();
+            updateUserSection();
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+        }
+
+        function loadUser() {
+            const savedUser = localStorage.getItem('eventPlanner_user');
+            if (savedUser) {
+                currentUser = savedUser;
+            }
+        }
+
+        async function loadEvents() {
+            try {
+                const result = await window.storage.get('calendar-events', true);
+                if (result) {
+                    events = JSON.parse(result.value);
+                }
+            } catch (error) {
+                console.log('No existing events found');
+            }
+        }
+
+        async function saveEvents() {
+            try {
+                await window.storage.set('calendar-events', JSON.stringify(events), true);
+            } catch (error) {
+                console.error('Error saving events:', error);
+                alert('Failed to save event. Please try again.');
+            }
+        }
+
+        function updateUserSection() {
+            const userSection = document.getElementById('userSection');
+            if (currentUser) {
+                userSection.innerHTML = `
+                    <div class="user-info">
+                        <span>👤</span>
+                        <span>${currentUser}</span>
+                    </div>
+                    <button class="btn-primary" onclick="handleLogout()">🚪 Logout</button>
+                `;
+            } else {
+                userSection.innerHTML = `
+                    <button class="btn-primary" onclick="showLoginModal()">👤 Login</button>
+                `;
+            }
+        }
+
+        function showLoginModal() {
+            document.getElementById('loginModal').classList.add('active');
+            document.getElementById('usernameInput').focus();
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.remove('active');
+            document.getElementById('usernameInput').value = '';
+        }
+
+        function handleLogin() {
+            const username = document.getElementById('usernameInput').value.trim();
+            if (!username) {
+                alert('Please enter a username');
+                return;
+            }
+            localStorage.setItem('eventPlanner_user', username);
+            currentUser = username;
+            updateUserSection();
+            closeLoginModal();
+        }
+
+        function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('eventPlanner_user');
+                currentUser = null;
+                updateUserSection();
+            }
+        }
+
+        function changeMonth(offset) {
+            currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1);
+            renderCalendar();
+        }
+
+        function getDateKey(day) {
+            return `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}-${day}`;
+        }
+
+        function renderCalendar() {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            document.getElementById('monthYear').textContent = 
+                `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDayOfWeek = firstDay.getDay();
+
+            const daysGrid = document.getElementById('daysGrid');
+            daysGrid.innerHTML = '';
+
+            // Empty cells before first day
+            for (let i = 0; i < startingDayOfWeek; i++) {
+                const emptyCell = document.createElement('div');
+                daysGrid.appendChild(emptyCell);
+            }
+
+            // Days of month
+            const today = new Date();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'day-cell';
+
+                const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                if (cellDate.toDateString() === today.toDateString()) {
+                    dayCell.classList.add('today');
+                }
+
+                const dateKey = getDateKey(day);
+                const dayEvents = events[dateKey] || [];
+
+                dayCell.innerHTML = `
+                    <div class="day-header">
+                        <span class="day-number">${day}</span>
+                        <button class="add-btn" onclick="openAddEventModal(${day})">+</button>
+                    </div>
+                    <div class="events-list" id="events-${day}"></div>
+                `;
+
+                daysGrid.appendChild(dayCell);
+
+                // Render events for this day
+                renderDayEvents(day, dayEvents);
+            }
+        }
+
+        function renderDayEvents(day, dayEvents) {
+            const eventsContainer = document.getElementById(`events-${day}`);
+            eventsContainer.innerHTML = '';
+
+            dayEvents.forEach((event, index) => {
+                const isOwner = event.owner === currentUser;
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'event-item';
+                eventDiv.style.backgroundColor = event.color + '33';
+                eventDiv.style.borderLeftColor = event.color;
+
+                eventDiv.innerHTML = `
+                    <div class="event-title" style="color: ${event.color}">
+                        ${!isOwner ? '🔒 ' : ''}${event.title}
+                    </div>
+                    ${event.time ? `<div class="event-time">⏰ ${event.time}</div>` : ''}
+                    <div class="event-owner">by ${event.owner}</div>
+                    ${isOwner ? `
+                        <div class="event-actions">
+                            <button class="edit-btn" onclick="editEvent(${day}, ${index})">✏️</button>
+                            <button class="delete-btn" onclick="deleteEvent(${day}, ${index})">🗑️</button>
+                        </div>
+                    ` : ''}
+                `;
+
+                eventsContainer.appendChild(eventDiv);
+            });
+        }
+
+        function openAddEventModal(day) {
+            if (!currentUser) {
+                alert('Please login to add events');
+                showLoginModal();
+                return;
+            }
+            selectedDate = day;
+            editingEventIndex = null;
+            document.getElementById('eventModalTitle').textContent = 'Add Event';
+            document.getElementById('saveButtonText').textContent = 'Add Event';
+            document.getElementById('eventTitle').value = '';
+            document.getElementById('eventTime').value = '';
+            document.getElementById('eventDescription').value = '';
+            selectedColor = colors[0].value;
+            updateColorPicker();
+            document.getElementById('eventModal').classList.add('active');
+        }
+
+        function editEvent(day, index) {
+            const dateKey = getDateKey(day);
+            const event = events[dateKey][index];
+
+            if (event.owner !== currentUser) {
+                alert('You can only edit your own events');
+                return;
+            }
+
+            selectedDate = day;
+            editingEventIndex = index;
+            document.getElementById('eventModalTitle').textContent = 'Edit Event';
+            document.getElementById('saveButtonText').textContent = 'Update Event';
+            document.getElementById('eventTitle').value = event.title;
+            document.getElementById('eventTime').value = event.time || '';
+            document.getElementById('eventDescription').value = event.description || '';
+            selectedColor = event.color;
+            updateColorPicker();
+            document.getElementById('eventModal').classList.add('active');
+        }
+
+        async function deleteEvent(day, index) {
+            const dateKey = getDateKey(day);
+            const event = events[dateKey][index];
+
+            if (event.owner !== currentUser) {
+                alert('You can only delete your own events');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete this event?')) return;
+
+            events[dateKey].splice(index, 1);
+            if (events[dateKey].length === 0) {
+                delete events[dateKey];
+            }
+
+            await saveEvents();
+            renderCalendar();
+        }
+
+        async function saveEvent() {
+            const title = document.getElementById('eventTitle').value.trim();
+            if (!title) {
+                alert('Please enter an event title');
+                return;
+            }
+
+            const eventData = {
+                title: title,
+                time: document.getElementById('eventTime').value,
+                description: document.getElementById('eventDescription').value,
+                color: selectedColor,
+                owner: currentUser
+            };
+
+            const dateKey = getDateKey(selectedDate);
+
+            if (editingEventIndex !== null) {
+                events[dateKey][editingEventIndex] = eventData;
+            } else {
+                if (!events[dateKey]) {
+                    events[dateKey] = [];
+                }
+                events[dateKey].push(eventData);
+            }
+
+            await saveEvents();
+            renderCalendar();
+            closeEventModal();
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').classList.remove('active');
+        }
+
+        function renderColorPicker() {
+            const colorPicker = document.getElementById('colorPicker');
+            colorPicker.innerHTML = colors.map(color => 
+                `<button class="color-option" style="background-color: ${color.value}" 
+                        onclick="selectColor('${color.value}')" 
+                        data-color="${color.value}"></button>`
+            ).join('');
+            updateColorPicker();
+        }
+
+        function selectColor(color) {
+            selectedColor = color;
+            updateColorPicker();
+        }
+
+        function updateColorPicker() {
+            document.querySelectorAll('.color-option').forEach(btn => {
+                if (btn.dataset.color === selectedColor) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeEventModal();
+                closeLoginModal();
+            }
+            if (e.key === 'Enter' && document.getElementById('loginModal').classList.contains('active')) {
+                handleLogin();
+            }
+        });
+
+        // Initialize app
+        init();
+    </script>
+</body>
 </html>

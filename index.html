@@ -268,7 +268,11 @@ async function pushEventsToGitHub(token, eventsObj, currentSha){
   if(!res.ok){
     const text = await res.text();
     console.error('GitHub PUT error body', text);
-    throw new Error(`GitHub API error ${res.status}: ${text}`);
+    // Throw an Error that includes status so caller can inspect
+    const err = new Error(`GitHub API error ${res.status}: ${text}`);
+    err.status = res.status;
+    err.body = text;
+    throw err;
   }
   return await res.json();
 }
@@ -494,67 +498,128 @@ async function pullFromGitHubSession(showErrors = false){
   }
 }
 
-/* tryPushToGitHub: ensure sha present before updating (fixes 422 "sha wasn't supplied") */
-async function tryPushToGitHub(eventsObj){
-  const token = getSessionToken();
-  if(!token){
-    githubStatus.textContent = '';
-    return;
-  }
-  githubStatus.textContent = 'GitHub: syncing...';
-  try{
-    // Ensure we have the latest sha before pushing
-    let currentSha = localStorage.getItem('gh_sha') || null;
-
-    // If we don't have a sha, try to fetch it from the Contents API (authenticated)
-    if(!currentSha){
-      try {
-        const metaUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${encodeURIComponent(GITHUB_PATH)}`;
-        const metaRes = await fetch(metaUrl, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }, cache: 'no-cache' });
-        if(metaRes.ok){
-          const metaJson = await metaRes.json();
-          if(metaJson && metaJson.sha){
-            currentSha = metaJson.sha;
-            localStorage.setItem('gh_sha', currentSha);
-          }
-        } else if(metaRes.status === 404){
-          // file doesn't exist yet — that's fine, we'll create it (no sha required)
-          currentSha = null;
-        } else {
-          console.warn('Could not fetch file metadata before push', metaRes.status);
-        }
-      } catch (metaErr) {
-        console.warn('Error fetching file metadata before push', metaErr);
-      }
-    }
-
-    // Now call pushEventsToGitHub with the (possibly null) currentSha
-    const res = await pushEventsToGitHub(token, eventsObj, currentSha);
-
-    if(res && res.content && res.content.sha){
-      localStorage.setItem('gh_sha', res.content.sha);
-      localStorage.setItem('events_last_push', new Date().toISOString());
-      console.log('GitHub push response', res);
-    }
-    githubStatus.textContent = '';
-
-    // Refresh local copy from remote (public-first)
-    try {
-      await pullFromGitHubSession(false);
-    } catch(e) {
-      console.warn('Pull after push failed', e);
-    }
-  }catch(err){
-    githubStatus.textContent = '';
-    console.error('GitHub push failed', err);
-    alert('GitHub push failed: ' + err.message);
-  }
-}
-
 /* Utilities */
 function escapeHtml(s){
   if(!s) return '';
   return s.replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]) });
+}
+
+/* Merge helpers for conflict resolution and dedupe */
+function dedupeEventsArray(arr){
+  const seen = new Set();
+  const out = [];
+  for(const ev of arr || []){
+    const key = `${(ev.title||'').trim()}|${(ev.description||'').trim()}`;
+    if(!seen.has(key)){
+      seen.add(key);
+      out.push(ev);
+    }
+  }
+  return out;
+}
+
+function mergeEventsObjects(localObj, remoteObj){
+  const merged = Object.assign({}, remoteObj || {});
+  for(const date of Object.keys(localObj || {})){
+    const localArr = Array.isArray(localObj[date]) ? localObj[date] : [];
+    const remoteArr = Array.isArray(merged[date]) ? merged[date] : [];
+    merged[date] = dedupeEventsArray(remoteArr.concat(localArr));
+  }
+  // keep remote-only dates already in merged
+  return merged;
+}
+
+async function fetchRemoteContentAndSha(token){
+  const owner = GITHUB_OWNER, repo = GITHUB_REPO, path = GITHUB_PATH;
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+  const res = await fetch(url, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }, cache: 'no-cache' });
+  if(res.ok){
+    const j = await res.json();
+    const content = atob(j.content.replace(/\n/g,'')); // decode base64
+    return { json: JSON.parse(content), sha: j.sha };
+  }
+  if(res.status === 404) return { json: null, sha: null };
+  throw new Error(`Failed to fetch remote content: ${res.status}`);
+}
+
+/* Robust push with conflict handling and automatic merge */
+async function tryPushToGitHub(eventsObj){
+  const token = getSessionToken();
+  if(!token){
+    // no token: nothing to push
+    githubStatus.textContent = '';
+    return;
+  }
+  githubStatus.textContent = 'GitHub: syncing...';
+
+  const MAX_RETRIES = 3;
+  let attempt = 0;
+  let currentSha = localStorage.getItem('gh_sha') || null;
+
+  // If we don't have a sha, try to fetch metadata once before first attempt
+  if(!currentSha){
+    try {
+      const meta = await fetchRemoteContentAndSha(token);
+      if(meta && meta.sha) { currentSha = meta.sha; localStorage.setItem('gh_sha', currentSha); }
+    } catch(e){
+      console.warn('Could not fetch initial sha', e);
+    }
+  }
+
+  while(attempt < MAX_RETRIES){
+    attempt++;
+    try{
+      // call push function (it expects currentSha or null)
+      const res = await pushEventsToGitHub(token, eventsObj, currentSha);
+      if(res && res.content && res.content.sha){
+        localStorage.setItem('gh_sha', res.content.sha);
+        localStorage.setItem('events_last_push', new Date().toISOString());
+      }
+      githubStatus.textContent = '';
+      // refresh local copy
+      try { await pullFromGitHubSession(false); } catch(e){ console.warn('pull after push failed', e); }
+      return; // success
+    }catch(err){
+      const msg = err && err.message ? err.message : String(err);
+      console.warn(`Push attempt ${attempt} failed:`, msg);
+
+      // If conflict (409) or missing sha (422), fetch remote, merge, and retry
+      if((err.status === 409) || msg.includes('409') || msg.includes('sha') || msg.includes('422')){
+        try{
+          const remote = await fetchRemoteContentAndSha(token);
+          const remoteJson = remote.json || {};
+          const remoteSha = remote.sha || null;
+
+          // Merge remote and local (local changes should be preserved)
+          const merged = mergeEventsObjects(eventsObj, remoteJson);
+
+          // Update eventsObj to merged and set currentSha to remoteSha (may be null if file missing)
+          eventsObj = merged;
+          currentSha = remoteSha;
+          // update local storage so UI shows merged state
+          saveLocalEvents(merged);
+
+          // small delay before retry to reduce race
+          await new Promise(r => setTimeout(r, 500 * attempt));
+          continue; // retry
+        }catch(fetchErr){
+          console.warn('Failed to fetch/merge remote after conflict', fetchErr);
+          githubStatus.textContent = '';
+          alert('GitHub push failed and merge attempt failed: ' + fetchErr.message);
+          throw fetchErr;
+        }
+      } else {
+        // other error: surface to user
+        githubStatus.textContent = '';
+        alert('GitHub push failed: ' + msg);
+        throw err;
+      }
+    }
+  }
+
+  // If we exit loop without returning, final failure
+  githubStatus.textContent = '';
+  alert('GitHub push failed after multiple attempts. Please refresh and try again.');
 }
 
 /* Remote SHA poller: auto-detect remote updates and pull */

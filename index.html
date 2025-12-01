@@ -176,10 +176,12 @@ textarea{min-height:90px;resize:vertical}
    ===========================
    - Repo is fixed below: GITHUB_OWNER / GITHUB_REPO / GITHUB_PATH
    - COMMITTER_NAME / COMMITTER_EMAIL are optional commit identity.
+   - RAW_BRANCH is used for public raw fetch (change if your repo uses a different branch)
 */
 const GITHUB_OWNER = 'page-host';
 const GITHUB_REPO  = 'panda-homepage';
 const GITHUB_PATH  = 'events.json';
+const RAW_BRANCH = 'main';
 const COMMITTER_NAME = 'Event Planner';
 const COMMITTER_EMAIL = 'noreply@example.com';
 /* ===========================
@@ -214,9 +216,37 @@ function getSessionToken(){ return sessionStorage.getItem('gh_token_session') ||
 function saveLocalEvents(events){ localStorage.setItem('events_local', JSON.stringify(events)); }
 function loadLocalEvents(){ return JSON.parse(localStorage.getItem('events_local') || '{}'); }
 
-/* GitHub API helpers (fixed repo) */
+/* ===========================
+   fetchEventsFromGitHub (public-first)
+   - Tries raw.githubusercontent.com (public) first.
+   - Falls back to authenticated GitHub Contents API if token provided.
+   =========================== */
 async function fetchEventsFromGitHub(token){
   const owner = GITHUB_OWNER, repo = GITHUB_REPO, path = GITHUB_PATH;
+
+  // 1) Try unauthenticated public raw fetch (works if repo/file is public)
+  try {
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${RAW_BRANCH}/${encodeURIComponent(path)}`;
+    const rawRes = await fetch(rawUrl, { cache: 'no-cache' });
+    if (rawRes.ok) {
+      const text = await rawRes.text();
+      if (text && text.trim()) {
+        try {
+          const parsed = JSON.parse(text);
+          return { json: parsed, sha: null }; // sha unknown for raw fetch
+        } catch (err) {
+          // invalid JSON in raw file — fall through to authenticated attempt
+          console.warn('Raw file JSON parse failed, will try authenticated API if token present', err);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Public raw fetch failed, will try authenticated API if token present', err);
+  }
+
+  // 2) If public fetch didn't return valid JSON, try authenticated GitHub Contents API (requires token)
+  if (!token) return null; // no token to try authenticated fetch
+
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
   const res = await fetch(url, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }});
   if(res.status === 200){
@@ -224,11 +254,12 @@ async function fetchEventsFromGitHub(token){
     const content = atob(j.content.replace(/\n/g,'')); // decode base64
     return { json: JSON.parse(content), sha: j.sha };
   } else {
-    // return the response for diagnostics if needed
+    // return null for diagnostics
     return null;
   }
 }
 
+/* Push helper */
 async function pushEventsToGitHub(token, eventsObj, currentSha){
   const owner = GITHUB_OWNER, repo = GITHUB_REPO, path = GITHUB_PATH;
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
@@ -415,12 +446,12 @@ tokenSubmit.onclick = async ()=>{
       adminMode = true; sessionStorage.setItem('isAdmin','true'); adminBtn.textContent='Logout Admin';
       updateAddSectionVisibility();
       githubStatus.textContent = `GitHub: connected (session) to ${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_PATH}`;
-      // try to pull events.json if exists
+      // try to pull events.json if exists (public-first logic will be used)
       try{
         const res = await fetchEventsFromGitHub(token);
         if(res && res.json){
           saveLocalEvents(res.json);
-          localStorage.setItem('gh_sha', res.sha);
+          if(res.sha) localStorage.setItem('gh_sha', res.sha);
           renderMonth(viewDate);
           alert('Connected and pulled events from GitHub (if file existed).');
         } else {
@@ -443,14 +474,28 @@ tokenSubmit.onclick = async ()=>{
   }
 };
 
-/* Pull helper */
+/* Pull helper (public-first) */
 async function pullFromGitHubSession(){
+  // Try public raw fetch first (so anyone can view events if file is public)
+  try {
+    const publicRes = await fetchEventsFromGitHub(null); // null token => public attempt
+    if (publicRes && publicRes.json) {
+      saveLocalEvents(publicRes.json);
+      // no sha from public raw; keep existing sha if any
+      renderMonth(viewDate);
+      return true;
+    }
+  } catch (err) {
+    console.warn('Public pull attempt failed', err);
+  }
+
+  // If public failed, try authenticated (session token)
   const token = getSessionToken();
-  if(!token) throw new Error('No session token. Login and paste token.');
+  if(!token) return false;
   const res = await fetchEventsFromGitHub(token);
   if(res && res.json){
     saveLocalEvents(res.json);
-    localStorage.setItem('gh_sha', res.sha);
+    if(res.sha) localStorage.setItem('gh_sha', res.sha);
     renderMonth(viewDate);
     return true;
   } else {
@@ -486,13 +531,18 @@ function escapeHtml(s){
   return s.replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]) });
 }
 
-/* Initialize */
+/* Initialize (public-first so anyone can view events) */
 (async function init(){
   updateAddSectionVisibility();
+  try{
+    await pullFromGitHubSession();
+  }catch(e){
+    // ignore errors; show local events if any
+    console.warn('Initial pull failed', e);
+  }
   const token = getSessionToken();
   if(token){
     githubStatus.textContent = `GitHub: connected (session) to ${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_PATH}`;
-    try{ await pullFromGitHubSession(); }catch(e){}
   } else {
     githubStatus.textContent = 'GitHub: not connected (repo fixed)';
   }

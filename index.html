@@ -77,6 +77,12 @@ textarea{min-height:90px;resize:vertical}
   #calendar{padding:8px;gap:8px}
   .day{min-height:90px;padding:10px}
 }
+
+/* Debug panel styles */
+#debugPanel{position:fixed;left:12px;bottom:12px;background:#fff;border:1px solid #ddd;padding:10px;border-radius:8px;z-index:9999;font-family:Inter,Arial,sans-serif;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,0.08);width:320px}
+#debugPanel h4{margin:0 0 8px 0;font-size:14px}
+#debugPanel pre{background:#f7f7f7;padding:8px;border-radius:6px;max-height:120px;overflow:auto}
+#debugPanel button{margin-right:6px;padding:6px 8px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer}
 </style>
 </head>
 <body>
@@ -85,7 +91,6 @@ textarea{min-height:90px;resize:vertical}
     <div class="logo">EP</div>
     <div>
       <div style="font-weight:700">Event Planner</div>
-      <!--<div class="small">Repo fixed to page-host/panda-homepage/events.json</div>-->
     </div>
   </div>
 
@@ -170,13 +175,25 @@ textarea{min-height:90px;resize:vertical}
   </div>
 </div>
 
+<!-- Debug panel -->
+<div id="debugPanel" aria-hidden="false">
+  <h4>Debug panel</h4>
+  <div><strong>gh_sha:</strong> <span id="dbg_sha">—</span></div>
+  <div><strong>last push:</strong> <span id="dbg_lastpush">—</span></div>
+  <div style="margin-top:8px">
+    <button id="dbg_forcePull">Force public pull</button>
+    <button id="dbg_showLocal">Show local events</button>
+    <button id="dbg_showStorage">Show storage</button>
+  </div>
+  <div style="margin-top:8px">
+    <div class="small">Response / logs:</div>
+    <pre id="dbg_log">ready</pre>
+  </div>
+</div>
+
 <script>
 /* ===========================
-   Configuration (edit here)
-   ===========================
-   - Repo is fixed below: GITHUB_OWNER / GITHUB_REPO / GITHUB_PATH
-   - COMMITTER_NAME / COMMITTER_EMAIL are optional commit identity.
-   - RAW_BRANCH is used for public raw fetch (change if your repo uses a different branch)
+   Configuration
 */
 const GITHUB_OWNER = 'page-host';
 const GITHUB_REPO  = 'panda-homepage';
@@ -185,8 +202,7 @@ const RAW_BRANCH = 'main';
 const COMMITTER_NAME = 'Event Planner';
 const COMMITTER_EMAIL = 'noreply@example.com';
 /* ===========================
-   End configuration
-   =========================== */
+*/
 
 /* Elements */
 const monthLabel = document.getElementById('monthLabel'), cal = document.getElementById('calendar');
@@ -205,7 +221,7 @@ const tokenSubmit = document.getElementById('tokenSubmit'), tokenCancel = docume
 let adminMode = sessionStorage.getItem('isAdmin') === 'true';
 let viewDate = new Date();
 
-/* Token handling: stored only in sessionStorage for this session */
+/* Token handling */
 function setSessionToken(token){
   if(token) sessionStorage.setItem('gh_token_session', token);
   else sessionStorage.removeItem('gh_token_session');
@@ -216,15 +232,11 @@ function getSessionToken(){ return sessionStorage.getItem('gh_token_session') ||
 function saveLocalEvents(events){ localStorage.setItem('events_local', JSON.stringify(events)); }
 function loadLocalEvents(){ return JSON.parse(localStorage.getItem('events_local') || '{}'); }
 
-/* ===========================
-   fetchEventsFromGitHub (public-first)
-   - Tries raw.githubusercontent.com (public) first with cache-busting.
-   - Falls back to authenticated GitHub Contents API if token provided.
-   =========================== */
+/* fetchEventsFromGitHub: public-first with cache-busting */
 async function fetchEventsFromGitHub(token){
   const owner = GITHUB_OWNER, repo = GITHUB_REPO, path = GITHUB_PATH;
 
-  // 1) Try unauthenticated public raw fetch (works if repo/file is public)
+  // 1) Try unauthenticated public raw fetch (cache-busted)
   try {
     const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${RAW_BRANCH}/${encodeURIComponent(path)}?t=${Date.now()}`;
     const rawRes = await fetch(rawUrl, { cache: 'no-cache' });
@@ -234,22 +246,20 @@ async function fetchEventsFromGitHub(token){
         try {
           const parsed = JSON.parse(text);
           console.log('Public raw fetch succeeded');
-          return { json: parsed, sha: null }; // sha unknown for raw fetch
+          return { json: parsed, sha: null };
         } catch (err) {
-          // invalid JSON in raw file — fall through to authenticated attempt
-          console.warn('Raw file JSON parse failed, will try authenticated API if token present', err);
+          console.warn('Raw JSON parse failed', err);
         }
       }
     } else {
-      console.warn('Raw fetch returned non-OK status', rawRes.status);
+      console.warn('Raw fetch status', rawRes.status);
     }
   } catch (err) {
-    console.warn('Public raw fetch failed, will try authenticated API if token present', err);
+    console.warn('Public raw fetch error', err);
   }
 
-  // 2) If public fetch didn't return valid JSON, try authenticated GitHub Contents API (requires token)
-  if (!token) return null; // no token to try authenticated fetch
-
+  // 2) Fallback to authenticated contents API if token provided
+  if (!token) return null;
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
   const res = await fetch(url, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }});
   if(res.status === 200){
@@ -257,13 +267,12 @@ async function fetchEventsFromGitHub(token){
     const content = atob(j.content.replace(/\n/g,'')); // decode base64
     return { json: JSON.parse(content), sha: j.sha };
   } else {
-    // return null for diagnostics
     console.warn('Authenticated contents API fetch failed', res.status);
     return null;
   }
 }
 
-/* Push helper (with logging) */
+/* pushEventsToGitHub with logging */
 async function pushEventsToGitHub(token, eventsObj, currentSha){
   const owner = GITHUB_OWNER, repo = GITHUB_REPO, path = GITHUB_PATH;
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
@@ -423,13 +432,11 @@ closePanel.onclick = ()=>panel.classList.remove('show')
 prev.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()-1, 1); renderMonth(viewDate) }
 next.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()+1, 1); renderMonth(viewDate) }
 
-/* Admin login via token only (no password) */
+/* Admin login via token only */
 adminBtn.onclick = async ()=>{
   if(adminMode){
-    // logout
     adminMode=false; sessionStorage.removeItem('isAdmin'); adminBtn.textContent='Admin Login'; updateAddSectionVisibility(); renderEventsPanel(); setSessionToken(''); githubStatus.textContent = 'GitHub: not connected (repo fixed)'; return;
   }
-  // open token modal
   tokenInput.value = '';
   tokenModalBackdrop.classList.add('show'); tokenModalBackdrop.setAttribute('aria-hidden','false');
   tokenInput.focus();
@@ -437,22 +444,18 @@ adminBtn.onclick = async ()=>{
 
 tokenCancel.onclick = ()=>{ tokenModalBackdrop.classList.remove('show'); tokenModalBackdrop.setAttribute('aria-hidden','true'); }
 
-/* When user submits token: validate by attempting to read the repo contents or repo metadata */
 tokenSubmit.onclick = async ()=>{
   const token = tokenInput.value.trim();
   if(!token) return alert('Paste a GitHub Personal Access Token (PAT).');
   tokenModalBackdrop.classList.remove('show'); tokenModalBackdrop.setAttribute('aria-hidden','true');
-  // validate token by calling the contents endpoint for the fixed path; if 200 or 404 (file missing) but auth ok, accept
   try{
     const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`;
     const repoRes = await fetch(url, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }});
     if(repoRes.status === 200){
-      // token can access repo metadata; accept as admin
       setSessionToken(token);
       adminMode = true; sessionStorage.setItem('isAdmin','true'); adminBtn.textContent='Logout Admin';
       updateAddSectionVisibility();
       githubStatus.textContent = `GitHub: connected (session) to ${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_PATH}`;
-      // try to pull events.json if exists (public-first logic will be used)
       try{
         const res = await fetchEventsFromGitHub(token);
         if(res && res.json){
@@ -482,12 +485,10 @@ tokenSubmit.onclick = async ()=>{
 
 /* Pull helper (public-first) */
 async function pullFromGitHubSession(showErrors = false){
-  // Try public raw fetch first (so anyone can view events if file is public)
   try {
-    const publicRes = await fetchEventsFromGitHub(null); // null token => public attempt
+    const publicRes = await fetchEventsFromGitHub(null);
     if (publicRes && publicRes.json) {
       saveLocalEvents(publicRes.json);
-      // no sha from public raw; keep existing sha if any
       renderMonth(viewDate);
       return true;
     }
@@ -495,7 +496,6 @@ async function pullFromGitHubSession(showErrors = false){
     console.warn('Public pull attempt failed', err);
   }
 
-  // If public failed, try authenticated (session token)
   const token = getSessionToken();
   if(!token){
     if(showErrors) alert('No public events file found and no admin token available.');
@@ -531,14 +531,12 @@ async function tryPushToGitHub(eventsObj){
     const res = await pushEventsToGitHub(token, eventsObj, currentSha);
     if(res && res.content && res.content.sha){
       localStorage.setItem('gh_sha', res.content.sha);
-      // store last push time so other tabs/devices can detect (same-origin only)
       localStorage.setItem('events_last_push', new Date().toISOString());
       console.log('GitHub push response', res);
     }
     githubStatus.textContent = 'GitHub: last sync ' + new Date().toLocaleString();
-    // Immediately try to refresh public copy (cache-busted)
     try {
-      await pullFromGitHubSession(false); // false => don't show alerts
+      await pullFromGitHubSession(false);
     } catch(e) {
       console.warn('Pull after push failed', e);
     }
@@ -555,7 +553,7 @@ function escapeHtml(s){
   return s.replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]) });
 }
 
-/* Init (public-first so anyone can view events) */
+/* Init (public-first) */
 (async function init(){
   updateAddSectionVisibility();
   try{
@@ -572,23 +570,23 @@ function escapeHtml(s){
   renderMonth(viewDate);
 })();
 
-/* Polling: refresh public copy periodically so other devices pick up changes */
+/* Polling: refresh public copy periodically */
 setInterval(async () => {
   try {
     await pullFromGitHubSession(false);
   } catch (e) {
     console.warn('Periodic pull failed', e);
   }
-}, 25000); // every 25 seconds
+}, 25000);
 
-/* Storage event: refresh when another tab on same origin pushes */
+/* Storage event: refresh when another tab pushes */
 window.addEventListener('storage', (e) => {
   if(e.key === 'events_last_push'){
     pullFromGitHubSession().catch(err => console.warn('pull on storage event failed', err));
   }
 });
 
-/* Update add form visibility based on admin mode */
+/* Update add form visibility */
 function updateAddSectionVisibility(){
   if(adminMode){
     addSection.classList.remove('disabled'); addEvent.classList.remove('disabled'); adminNotice.textContent='You are admin. You can add, edit and delete events.';
@@ -598,6 +596,64 @@ function updateAddSectionVisibility(){
     adminState.textContent = 'off';
   }
 }
+
+/* Debug panel behavior */
+(function(){
+  const dbg_sha = document.getElementById('dbg_sha');
+  const dbg_lastpush = document.getElementById('dbg_lastpush');
+  const dbg_log = document.getElementById('dbg_log');
+
+  function log(msg){
+    console.log(msg);
+    dbg_log.textContent = (new Date()).toLocaleTimeString() + ' — ' + msg + '\n' + dbg_log.textContent;
+  }
+
+  function refreshStatus(){
+    dbg_sha.textContent = localStorage.getItem('gh_sha') || 'null';
+    dbg_lastpush.textContent = localStorage.getItem('events_last_push') || 'never';
+  }
+
+  async function publicPull(){
+    log('Starting public raw fetch (cache-busted)...');
+    try{
+      const rawUrl = `https://raw.githubusercontent.com/${encodeURIComponent(GITHUB_OWNER)}/${encodeURIComponent(GITHUB_REPO)}/${encodeURIComponent(RAW_BRANCH)}/${encodeURIComponent(GITHUB_PATH)}?t=${Date.now()}`;
+      const r = await fetch(rawUrl, {cache:'no-cache'});
+      log('raw fetch status: ' + r.status);
+      if(r.ok){
+        const text = await r.text();
+        try{
+          const parsed = JSON.parse(text);
+          localStorage.setItem('events_local', JSON.stringify(parsed));
+          log('Public raw JSON parsed and saved to localStorage (events_local).');
+          refreshStatus();
+          renderMonth(viewDate);
+        }catch(e){
+          log('Public raw JSON parse failed: ' + e.message);
+        }
+      } else {
+        log('Raw fetch not ok: ' + r.status);
+      }
+    }catch(e){
+      log('Public raw fetch error: ' + e.message);
+    }
+  }
+
+  document.getElementById('dbg_forcePull').addEventListener('click', publicPull);
+  document.getElementById('dbg_showLocal').addEventListener('click', ()=>{
+    const ev = localStorage.getItem('events_local') || '{}';
+    log('events_local length: ' + ev.length);
+    alert(ev.slice(0,2000));
+  });
+  document.getElementById('dbg_showStorage').addEventListener('click', ()=>{
+    const keys = ['events_local','gh_sha','events_last_push'];
+    const out = keys.map(k => `${k}: ${localStorage.getItem(k)}`).join('\n\n');
+    alert(out);
+    log('showed storage keys');
+  });
+
+  refreshStatus();
+  setInterval(refreshStatus, 5000);
+})();
 </script>
 </body>
 </html>

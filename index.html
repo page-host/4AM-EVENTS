@@ -115,12 +115,11 @@ textarea{min-height:90px;resize:vertical}
       <button id="closePanel" class="btn">Close</button>
     </div>
 
-    <div style="margin-top:12px">
-      <div class="small" id="adminNotice">Only admin can add, edit, or delete events</div>
-      <div class="small" style="margin-top:6px">Admin mode: <strong id="adminState">off</strong></div>
-      <div class="small" style="margin-top:6px" id="githubStatus">GitHub: not connected (repo fixed)</div>
-      <div class="small" style="margin-top:6px;color:var(--muted)">Repo: <strong>page-host/panda-homepage/events.json</strong></div>
-    </div>
+    <!-- Hidden admin/status elements kept for JS compatibility -->
+    <div id="adminNotice" style="display:none"></div>
+    <div id="adminState" style="display:none"></div>
+    <div id="githubStatus" style="display:none"></div>
+    <div style="display:none" id="repoInfo">Repo: <strong>page-host/panda-homepage/events.json</strong></div>
   </aside>
 </main>
 
@@ -162,7 +161,6 @@ textarea{min-height:90px;resize:vertical}
     <div class="token-grid" style="margin-top:12px">
       <label for="tokenInput" class="small">Access Token</label>
       <input id="tokenInput" type="password" placeholder="ghp_xxx..." autocomplete="one-time-code" />
-      <!-- <div class="note" style="margin-top:6px">Token is stored in session only and cleared when you close the tab or logout.</div> -->
       <div class="token-actions" style="margin-top:6px">
         <button id="tokenSubmit" class="btn-primary">Connect</button>
       </div>
@@ -413,7 +411,7 @@ next.onclick = ()=>{ viewDate = new Date(viewDate.getFullYear(), viewDate.getMon
 /* Admin login via token only */
 adminBtn.onclick = async ()=>{
   if(adminMode){
-    adminMode=false; sessionStorage.removeItem('isAdmin'); adminBtn.textContent='Admin Login'; updateAddSectionVisibility(); renderEventsPanel(); setSessionToken(''); githubStatus.textContent = 'GitHub: not connected (repo fixed)'; return;
+    adminMode=false; sessionStorage.removeItem('isAdmin'); adminBtn.textContent='Admin Login'; updateAddSectionVisibility(); renderEventsPanel(); setSessionToken(''); githubStatus.textContent = ''; return;
   }
   tokenInput.value = '';
   tokenModalBackdrop.classList.add('show'); tokenModalBackdrop.setAttribute('aria-hidden','false');
@@ -457,7 +455,7 @@ tokenSubmit.onclick = async ()=>{
     setSessionToken('');
     adminMode = false;
     alert('Token validation failed: ' + err.message);
-    githubStatus.textContent = 'GitHub: not connected (repo fixed)';
+    githubStatus.textContent = '';
   }
 };
 
@@ -500,7 +498,7 @@ async function pullFromGitHubSession(showErrors = false){
 async function tryPushToGitHub(eventsObj){
   const token = getSessionToken();
   if(!token){
-    githubStatus.textContent = 'GitHub: not connected (no session token)';
+    githubStatus.textContent = '';
     return;
   }
   githubStatus.textContent = 'GitHub: syncing...';
@@ -538,7 +536,7 @@ async function tryPushToGitHub(eventsObj){
       localStorage.setItem('events_last_push', new Date().toISOString());
       console.log('GitHub push response', res);
     }
-    githubStatus.textContent = 'GitHub: last sync ' + new Date().toLocaleString();
+    githubStatus.textContent = '';
 
     // Refresh local copy from remote (public-first)
     try {
@@ -547,7 +545,7 @@ async function tryPushToGitHub(eventsObj){
       console.warn('Pull after push failed', e);
     }
   }catch(err){
-    githubStatus.textContent = 'GitHub: sync failed';
+    githubStatus.textContent = '';
     console.error('GitHub push failed', err);
     alert('GitHub push failed: ' + err.message);
   }
@@ -608,12 +606,6 @@ async function remoteShaPoller() {
   }catch(e){
     console.warn('Initial pull failed', e);
   }
-  const token = getSessionToken();
-  if(token){
-    githubStatus.textContent = `GitHub: connected (session) to ${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_PATH}`;
-  } else {
-    githubStatus.textContent = 'GitHub: not connected (repo fixed)';
-  }
   renderMonth(viewDate);
   // start remote poller shortly after init
   setTimeout(remoteShaPoller, 3000);
@@ -632,26 +624,17 @@ window.addEventListener('storage', (e) => {
 
 /* Update add form visibility */
 function updateAddSectionVisibility(){
+  // Keep elements present but hidden; JS still updates them if needed
   if(adminMode){
-    addSection.classList.remove('disabled'); addEvent.classList.remove('disabled'); adminNotice.textContent='You are admin. You can add, edit and delete events.';
-    adminState.textContent = 'on';
+    adminNotice.textContent = '';
+    adminState.textContent = '';
+    githubStatus.textContent = '';
   } else {
-    addSection.classList.add('disabled'); addEvent.classList.add('disabled'); adminNotice.textContent='Only admin can add, edit or delete events.';
-    adminState.textContent = 'off';
+    adminNotice.textContent = '';
+    adminState.textContent = '';
+    githubStatus.textContent = '';
   }
 }
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-

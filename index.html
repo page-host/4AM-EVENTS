@@ -133,7 +133,7 @@ textarea{min-height:90px;resize:vertical}
         <div class="small" id="modalSub">Click an event to read details</div>
       </div>
       <div>
-        <button id="modalAdd" class="btn-primary">Add (admin)</button>
+        <button id="modalAdd" class="btn-primary">Add Admin</button>
         <button id="modalClose" class="btn">Close</button>
       </div>
     </div>
@@ -151,8 +151,8 @@ textarea{min-height:90px;resize:vertical}
   <div class="modal" role="document" aria-labelledby="tokenLoginTitle">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
       <div>
-        <h3 id="tokenLoginTitle" style="margin:0">Admin Login — GitHub Token</h3>
-        <div class="small" style="margin-top:6px">Paste a GitHub Personal Access Token (session-only). Token needs public_repo or repo scope.</div>
+        <h3 id="tokenLoginTitle" style="margin:0">Admin Login</h3>
+        <div class="small" style="margin-top:6px">Input Token</div>
       </div>
       <div style="display:flex;gap:8px">
         <button id="tokenCancel" class="btn">Cancel</button>
@@ -160,9 +160,9 @@ textarea{min-height:90px;resize:vertical}
     </div>
 
     <div class="token-grid" style="margin-top:12px">
-      <label for="tokenInput" class="small">Personal Access Token</label>
+      <label for="tokenInput" class="small">Access Token</label>
       <input id="tokenInput" type="password" placeholder="ghp_xxx..." autocomplete="one-time-code" />
-      <div class="note" style="margin-top:6px">Token is stored in session only and cleared when you close the tab or logout.</div>
+      <!-- <div class="note" style="margin-top:6px">Token is stored in session only and cleared when you close the tab or logout.</div> -->
       <div class="token-actions" style="margin-top:6px">
         <button id="tokenSubmit" class="btn-primary">Connect</button>
       </div>
@@ -643,6 +643,7 @@ function updateAddSectionVisibility(){
 </script>
 </body>
 </html>
+
 
 
 

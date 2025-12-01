@@ -218,7 +218,7 @@ function loadLocalEvents(){ return JSON.parse(localStorage.getItem('events_local
 
 /* ===========================
    fetchEventsFromGitHub (public-first)
-   - Tries raw.githubusercontent.com (public) first.
+   - Tries raw.githubusercontent.com (public) first with cache-busting.
    - Falls back to authenticated GitHub Contents API if token provided.
    =========================== */
 async function fetchEventsFromGitHub(token){
@@ -226,19 +226,22 @@ async function fetchEventsFromGitHub(token){
 
   // 1) Try unauthenticated public raw fetch (works if repo/file is public)
   try {
-    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${RAW_BRANCH}/${encodeURIComponent(path)}`;
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${RAW_BRANCH}/${encodeURIComponent(path)}?t=${Date.now()}`;
     const rawRes = await fetch(rawUrl, { cache: 'no-cache' });
     if (rawRes.ok) {
       const text = await rawRes.text();
       if (text && text.trim()) {
         try {
           const parsed = JSON.parse(text);
+          console.log('Public raw fetch succeeded');
           return { json: parsed, sha: null }; // sha unknown for raw fetch
         } catch (err) {
           // invalid JSON in raw file — fall through to authenticated attempt
           console.warn('Raw file JSON parse failed, will try authenticated API if token present', err);
         }
       }
+    } else {
+      console.warn('Raw fetch returned non-OK status', rawRes.status);
     }
   } catch (err) {
     console.warn('Public raw fetch failed, will try authenticated API if token present', err);
@@ -255,11 +258,12 @@ async function fetchEventsFromGitHub(token){
     return { json: JSON.parse(content), sha: j.sha };
   } else {
     // return null for diagnostics
+    console.warn('Authenticated contents API fetch failed', res.status);
     return null;
   }
 }
 
-/* Push helper */
+/* Push helper (with logging) */
 async function pushEventsToGitHub(token, eventsObj, currentSha){
   const owner = GITHUB_OWNER, repo = GITHUB_REPO, path = GITHUB_PATH;
   const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
@@ -275,8 +279,10 @@ async function pushEventsToGitHub(token, eventsObj, currentSha){
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
     body: JSON.stringify(body)
   });
+  console.log('PUT to GitHub status', res.status);
   if(!res.ok){
     const text = await res.text();
+    console.error('GitHub PUT error body', text);
     throw new Error(`GitHub API error ${res.status}: ${text}`);
   }
   return await res.json();
@@ -475,7 +481,7 @@ tokenSubmit.onclick = async ()=>{
 };
 
 /* Pull helper (public-first) */
-async function pullFromGitHubSession(){
+async function pullFromGitHubSession(showErrors = false){
   // Try public raw fetch first (so anyone can view events if file is public)
   try {
     const publicRes = await fetchEventsFromGitHub(null); // null token => public attempt
@@ -491,19 +497,28 @@ async function pullFromGitHubSession(){
 
   // If public failed, try authenticated (session token)
   const token = getSessionToken();
-  if(!token) return false;
-  const res = await fetchEventsFromGitHub(token);
-  if(res && res.json){
-    saveLocalEvents(res.json);
-    if(res.sha) localStorage.setItem('gh_sha', res.sha);
-    renderMonth(viewDate);
-    return true;
-  } else {
+  if(!token){
+    if(showErrors) alert('No public events file found and no admin token available.');
     return false;
+  }
+  try {
+    const res = await fetchEventsFromGitHub(token);
+    if(res && res.json){
+      saveLocalEvents(res.json);
+      if(res.sha) localStorage.setItem('gh_sha', res.sha);
+      renderMonth(viewDate);
+      return true;
+    } else {
+      if(showErrors) alert('No events file found in repo (will create on first push).');
+      return false;
+    }
+  } catch (err) {
+    if(showErrors) alert('Pull failed: ' + err.message);
+    throw err;
   }
 }
 
-/* Push helper */
+/* Push helper (stores sha, broadcasts update, pulls after push) */
 async function tryPushToGitHub(eventsObj){
   const token = getSessionToken();
   if(!token){
@@ -516,8 +531,17 @@ async function tryPushToGitHub(eventsObj){
     const res = await pushEventsToGitHub(token, eventsObj, currentSha);
     if(res && res.content && res.content.sha){
       localStorage.setItem('gh_sha', res.content.sha);
+      // store last push time so other tabs/devices can detect (same-origin only)
+      localStorage.setItem('events_last_push', new Date().toISOString());
+      console.log('GitHub push response', res);
     }
     githubStatus.textContent = 'GitHub: last sync ' + new Date().toLocaleString();
+    // Immediately try to refresh public copy (cache-busted)
+    try {
+      await pullFromGitHubSession(false); // false => don't show alerts
+    } catch(e) {
+      console.warn('Pull after push failed', e);
+    }
   }catch(err){
     githubStatus.textContent = 'GitHub: sync failed';
     console.error('GitHub push failed', err);
@@ -525,19 +549,18 @@ async function tryPushToGitHub(eventsObj){
   }
 }
 
-/* Utility: escape HTML */
+/* Utilities */
 function escapeHtml(s){
   if(!s) return '';
   return s.replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]) });
 }
 
-/* Initialize (public-first so anyone can view events) */
+/* Init (public-first so anyone can view events) */
 (async function init(){
   updateAddSectionVisibility();
   try{
-    await pullFromGitHubSession();
+    await pullFromGitHubSession(false);
   }catch(e){
-    // ignore errors; show local events if any
     console.warn('Initial pull failed', e);
   }
   const token = getSessionToken();
@@ -548,6 +571,22 @@ function escapeHtml(s){
   }
   renderMonth(viewDate);
 })();
+
+/* Polling: refresh public copy periodically so other devices pick up changes */
+setInterval(async () => {
+  try {
+    await pullFromGitHubSession(false);
+  } catch (e) {
+    console.warn('Periodic pull failed', e);
+  }
+}, 25000); // every 25 seconds
+
+/* Storage event: refresh when another tab on same origin pushes */
+window.addEventListener('storage', (e) => {
+  if(e.key === 'events_last_push'){
+    pullFromGitHubSession().catch(err => console.warn('pull on storage event failed', err));
+  }
+});
 
 /* Update add form visibility based on admin mode */
 function updateAddSectionVisibility(){

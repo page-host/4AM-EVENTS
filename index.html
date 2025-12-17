@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>4AM Event Planner</title>
+    <title>4AM EVENTS PLANNER</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!--  Logo -->
+     <!--  Logo -->
     <link rel="icon" href="assets/cal.png">
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -58,6 +58,19 @@
       
       /* Smooth transitions for grid cells */
       .cell-transition { transition: transform 0.1s ease-in-out, background-color 0.1s; }
+
+      /* Custom Today Gradient */
+      .bg-gradient-today {
+        background: linear-gradient(135deg, #ff00cc, #333399);
+      }
+
+      /* Gradient Text Utility */
+      .text-gradient-brand {
+        background: linear-gradient(to bottom right, #FF136F, #3F07F8, #FF9C35);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
     </style>
   </head>
   <body class="">
@@ -306,9 +319,12 @@
           const dayEvents = state.events[dateKey] || [];
           const isToday = dateKey === todayStr;
           
+          // Updated today's date circle with the requested linear-gradient(90deg, #56ab2f, #a8e063)
           const numClass = isToday
-            ? 'bg-brand-purple dark:bg-brand-pink text-white shadow-md scale-110'
+            ? 'bg-gradient-today text-white shadow-lg scale-110 z-10 transition-transform ring-2 ring-white dark:ring-gray-700'
             : 'text-gray-700 dark:text-gray-300';
+            
+          const digitDisplay = day;
             
           const eventsHtml = dayEvents.map((evt, idx) => {
             const textContent = (evt.title + ' ' + (evt.description || '')).toLowerCase();
@@ -329,7 +345,7 @@
           html += `
             <div onclick="actions.selectDate('${dateKey}')" class="group relative min-h-[6rem] sm:min-h-[8rem] border-r border-b border-gray-100 dark:border-gray-700 p-1 sm:p-2 cursor-pointer bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-200">
               <div class="flex justify-between items-start mb-1">
-                <span class="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-xs sm:text-sm font-bold ${numClass}">${day}</span>
+                <span class="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full text-xs sm:text-sm font-bold ${numClass}">${digitDisplay}</span>
                 ${dayEvents.length > 0 ? '<span class="sm:hidden flex h-1.5 w-1.5 rounded-full bg-brand-pink mb-auto mt-1 mr-1 shadow-sm"></span>' : ''}
               </div>
               <div class="overflow-hidden">${eventsHtml}</div>

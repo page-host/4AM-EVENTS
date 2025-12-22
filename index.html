@@ -162,7 +162,7 @@
         "2025-12-01": [{ "title": "বাংলা এসাইনমেন্ট সাবমিট", "description": "এসাইনমেন্ট টপিক : তোমার জীবনের ক্ষুদে গল্প" }],
         "2025-12-03": [{ "title": "কম্পিউটার অ্যালগরিদম সিটি", "description": "সিটি টপিক : গ্রিডি অ্যালগরিদম" }],
         "2025-12-04": [{ "title": "ডিবিএমএস মেকআপ ক্লাস", "description": "Class Link : https://bdren.zoom.us/j/92389227210?pwd=UVl27Y8qrD4TWDfrSTDYZC3yQOsnCV.1" }],
-        "2025-12-05": [{ "title": "বাংলা অনলাইন ক্লাস", "description": "আগামীকাল রাত ১০টায় বাংলা অনলাইন ক্লাস হবে..Postponed" }],
+        "2025-12-05": [{ "title": "বাংলা অনলাইন ক্লাস", "description": "আগামীকাল রাত ১০টায় বাংলা অনলাইন ক্লাস হবে..Postponed" }],
         "2025-12-15": [{ "title": "ডিবিএমএস ল্যাব সিটি postponed", "description": "টপিক : এইচআর স্কিমা" }],
         "2025-12-11": [
           { "title": "ডিবিএমএস মেকআপ ক্লাস", "description": "Class link : https://bdren.zoom.us/j/92038918111?pwd=3ayeQb8G76zFmlx8USUlWbGcDOahoP.1" },
@@ -188,15 +188,122 @@
         isDarkMode: localStorage.getItem('4am_dark_mode') === 'true',
         
         // Reminder State
-        isReminderModalOpen: true, 
-        reminderValue: 1,
-        reminderUnit: 'days' 
+        isReminderModalOpen: false, 
+        reminderValue: parseInt(localStorage.getItem('4am_reminder_value')) || 1,
+        reminderUnit: localStorage.getItem('4am_reminder_unit') || 'days',
+        notificationsEnabled: localStorage.getItem('4am_notifications_enabled') === 'true',
+        notificationPermission: 'default'
       };
 
       // Update document class immediately
       if (state.isDarkMode) {
         document.body.classList.add('dark');
         document.documentElement.classList.add('dark');
+      }
+
+      // Check notification permission on load
+      if ('Notification' in window) {
+        state.notificationPermission = Notification.permission;
+      }
+
+      // --- Notification System ---
+      async function requestNotificationPermission() {
+        if (!('Notification' in window)) {
+          alert('Notifications are not supported in your browser.');
+          return false;
+        }
+        
+        if (Notification.permission === 'granted') {
+          return true;
+        }
+        
+        if (Notification.permission !== 'denied') {
+          const permission = await Notification.requestPermission();
+          state.notificationPermission = permission;
+          return permission === 'granted';
+        }
+        
+        return false;
+      }
+
+      function scheduleNotifications() {
+        if (!state.notificationsEnabled) return;
+        
+        // Clear existing checks
+        if (window.notificationInterval) {
+          clearInterval(window.notificationInterval);
+        }
+        
+        // Check every hour for upcoming events
+        window.notificationInterval = setInterval(checkUpcomingEvents, 3600000);
+        
+        // Check immediately
+        checkUpcomingEvents();
+      }
+
+      function checkUpcomingEvents() {
+        if (!state.notificationsEnabled || state.notificationPermission !== 'granted') return;
+        
+        const now = new Date();
+        const multiplier = state.reminderUnit === 'hours' ? 3600000 : 86400000;
+        const reminderMs = state.reminderValue * multiplier;
+        
+        Object.keys(state.events).forEach(dateKey => {
+          const eventDate = new Date(dateKey);
+          eventDate.setHours(9, 0, 0, 0); // Default to 9 AM
+          const timeDiff = eventDate - now;
+          
+          // If event is within reminder window and in the future
+          if (timeDiff > 0 && timeDiff <= reminderMs) {
+            const events = state.events[dateKey];
+            const notifiedKey = `notified_${dateKey}`;
+            
+            // Check if we already notified for this date
+            if (!sessionStorage.getItem(notifiedKey)) {
+              events.forEach(evt => {
+                showNotification(evt, dateKey);
+              });
+              sessionStorage.setItem(notifiedKey, 'true');
+            }
+          }
+        });
+      }
+
+      function showNotification(event, dateKey) {
+        if (state.notificationPermission !== 'granted') return;
+        
+        const dateStr = new Date(dateKey).toLocaleDateString(undefined, { 
+          weekday: 'short', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+        
+        const notification = new Notification('📅 Upcoming: ' + event.title, {
+          body: `${dateStr}\n${event.description || 'No details'}`,
+          icon: 'assets/cal.png',
+          badge: 'assets/cal.png',
+          tag: dateKey + event.title,
+          requireInteraction: false,
+          vibrate: [200, 100, 200]
+        });
+        
+        notification.onclick = function() {
+          window.focus();
+          actions.navigateToDate(dateKey);
+          notification.close();
+        };
+      }
+
+      function testNotification() {
+        if (state.notificationPermission !== 'granted') return;
+        
+        const notification = new Notification('🔔 4AM Events Test', {
+          body: 'Notifications are working! You\'ll be alerted about upcoming events.',
+          icon: 'assets/cal.png',
+          tag: 'test-notification'
+        });
+        
+        setTimeout(() => notification.close(), 5000);
       }
 
       // --- Utilities ---
@@ -362,7 +469,28 @@
         setReminderUnit: (val) => { state.reminderUnit = val; },
         openReminderModal: () => { state.isReminderModalOpen = true; render(); },
         closeReminderModal: () => { state.isReminderModalOpen = false; render(); },
-        confirmReminder: () => {
+        confirmReminder: async () => {
+          const granted = await requestNotificationPermission();
+          if (granted) {
+            state.notificationsEnabled = true;
+            state.notificationPermission = 'granted';
+            localStorage.setItem('4am_notifications_enabled', 'true');
+            localStorage.setItem('4am_reminder_value', state.reminderValue);
+            localStorage.setItem('4am_reminder_unit', state.reminderUnit);
+            scheduleNotifications();
+            testNotification();
+            state.isReminderModalOpen = false;
+          } else {
+            alert('Please enable notifications in your browser settings to receive alerts.');
+          }
+          render();
+        },
+        disableReminders: () => {
+          state.notificationsEnabled = false;
+          localStorage.setItem('4am_notifications_enabled', 'false');
+          if (window.notificationInterval) {
+            clearInterval(window.notificationInterval);
+          }
           state.isReminderModalOpen = false;
           render();
         }
@@ -406,8 +534,9 @@
                 <button onclick="actions.toggleDarkMode()" class="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 shadow-sm active:scale-95 transition-transform" aria-label="Toggle Dark Mode">
                    ${Icon(state.isDarkMode ? 'sun' : 'moon', 20)}
                 </button>
-                <button onclick="actions.openReminderModal()" class="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-brand-purple dark:text-brand-orange rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 shadow-sm active:scale-95 transition-transform" aria-label="Notifications">
-                   ${Icon('bell', 20)}
+                <button onclick="actions.openReminderModal()" class="px-3 py-2 ${state.notificationsEnabled ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-600 dark:text-green-400' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400'} border rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 shadow-sm active:scale-95 transition-all relative" aria-label="Notifications">
+                   ${Icon(state.notificationsEnabled ? 'bell-ring' : 'bell-off', 20)}
+                   ${state.notificationsEnabled ? '<span class="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>' : ''}
                 </button>
                 <button onclick="actions.today()" class="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-sm font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 shadow-sm flex-1 sm:flex-none">
                   Today

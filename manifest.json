@@ -1,0 +1,22 @@
+{
+  "name": "4AM Event Planner",
+  "short_name": "4AM Events",
+  "description": "High-performance academic schedule tracker.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#FF136F",
+  "icons": [
+    {
+      "src": "assets/cal.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/cal.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -86,10 +86,60 @@
   "2025-12-31": [
     {
       "title": "GEBL-2401",
-      "description": ""
+      "description": "BANGLA LANGIAGE & LITERATURE"
     },
     {
       "title": "9:30AM-12:00PM",
+      "description": ""
+    }
+  ],
+  "2026-01-04": [
+    {
+      "title": "CSE-2423",
+      "description": "DATABASE MANAGEMENT SYSTEMS"
+    },
+    {
+      "title": "1:30PM-4:00PM",
+      "description": ""
+    }
+  ],
+  "2026-01-07": [
+    {
+      "title": "CSE-2427",
+      "description": "THEORY OF COMPUTATION"
+    },
+    {
+      "title": "9:30AM-12:00PM",
+      "description": ""
+    }
+  ],
+  "2026-01-10": [
+    {
+      "title": "MATH-2407",
+      "description": "MATHEMATICS IV"
+    },
+    {
+      "title": "1:30PM-4:00PM",
+      "description": ""
+    }
+  ],
+  "2026-01-12": [
+    {
+      "title": "ACC-2401",
+      "description": "FINANCIAL & MANAGERIAL ACCOUNTING"
+    },
+    {
+      "title": "1:30PM-4:00PM",
+      "description": ""
+    }
+  ],
+  "2026-01-14": [
+    {
+      "title": "CSE-2421",
+      "description": "COMPUTER ALGORITHMS"
+    },
+    {
+      "title": "1:30PM-4:00PM",
       "description": ""
     }
   ]

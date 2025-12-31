@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome 2026</title>
+    <style>
+        /* --- RESET & BASE STYLES --- */
+        :root {
+            --bg-color: #0f0c29;
+            --bg-gradient: linear-gradient(to bottom, #05030a, #201a3a, #100a1f);
+            --text-color: #ffffff;
+            --accent-gold: #ffd700;
+            --accent-neon: #00f260;
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; 
+            font-family: var(--font-main);
+            background: var(--bg-gradient);
+            color: var(--text-color);
+        }
+
+        /* --- CANVAS BACKGROUND --- */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            cursor: crosshair;
+        }
+
+        /* --- UI LAYER --- */
+        .ui-layer {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            pointer-events: none; 
+            text-align: center;
+        }
+
+        /* --- HEADER / TEXT --- */
+        .header-content {
+            padding: 2rem 3rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 15px 50px 0 rgba(0, 0, 0, 0.5);
+            pointer-events: auto; 
+            animation: float 6s ease-in-out infinite;
+            max-width: 90%;
+        }
+
+        .year-label {
+            font-size: 1.2rem;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: var(--accent-neon);
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 15px rgba(0, 242, 96, 0.6);
+            font-weight: bold;
+        }
+
+        .year-title {
+            font-size: clamp(4rem, 12vw, 9rem);
+            font-weight: 900;
+            background: linear-gradient(to right, #fff, var(--accent-gold), #ff8c00);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            position: relative;
+            line-height: 1;
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5));
+        }
+
+        /* --- COUNTDOWN TIMER --- */
+        .countdown-container {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .time-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 80px;
+        }
+
+        .time-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .time-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 0.5rem;
+            opacity: 0.7;
+            font-weight: 600;
+        }
+
+        .hint {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            opacity: 0.5;
+            font-weight: bold;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 768px) {
+            .year-title { font-size: 4.5rem; }
+            .time-value { font-size: 1.5rem; min-width: 60px; padding: 0.5rem; }
+            .header-content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas for Fireworks -->
+    <canvas id="canvas-container"></canvas>
+
+    <!-- Main UI -->
+    <main class="ui-layer">
+        <section class="header-content">
+            <div class="year-label">Happy New Year</div>
+            <h1 class="year-title">2026</h1>
+            
+            <div class="countdown-container" id="countdown">
+                <div class="time-box">
+                    <span class="time-value" id="days">00</span>
+                    <span class="time-label">Days</span>
+                </div>
+                <div class="time-box">
+                    <span class="time-value" id="hours">00</span>
+                    <span class="time-label">Hours</span>
+                </div>
+                <div class="time-box">
+                    <span class="time-value" id="minutes">00</span>
+                    <span class="time-label">Minutes</span>
+                </div>
+                <div class="time-box">
+                    <span class="time-value" id="seconds">00</span>
+                    <span class="time-label">Seconds</span>
+                </div>
+            </div>
+
+            <div class="hint" id="sound-status">Sound: On (Attempted)</div>
+        </section>
+    </main>
+
+    <script>
+        // --- CONFIGURATION (TWEAKED FOR BIGGER FIREWORKS) ---
+        const CONFIG = {
+            particleCount: 150,      // Increased for huge explosions
+            gravity: 0.06,           
+            friction: 0.96,          
+            launchInterval: 120,     // Fast fire rate
+            hueVariance: 40          
+        };
+
+        // --- Elements ---
+        const canvas = document.getElementById('canvas-container');
+        const ctx = canvas.getContext('2d');
+        const soundStatus = document.getElementById('sound-status');
+        const countdownEls = {
+            days: document.getElementById('days'),
+            hours: document.getElementById('hours'),
+            minutes: document.getElementById('minutes'),
+            seconds: document.getElementById('seconds')
+        };
+
+        // --- AUDIO SYSTEM ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = new AudioContext();
+        let audioEnabled = false;
+
+        function initAudio() {
+            if (audioEnabled) return;
+            
+            // Try to resume context immediately
+            audioCtx.resume().then(() => {
+                audioEnabled = true;
+                soundStatus.innerText = "Sound: ON";
+                soundStatus.style.color = "#00f260";
+                console.log("Audio started successfully");
+            }).catch(e => {
+                console.warn("Autoplay blocked by browser. Interaction required.");
+                soundStatus.innerText = "Sound: BLOCKED (Click Screen)";
+                soundStatus.style.color = "#ff4444";
+                
+                // Fallback: Enable on first click if autoplay fails
+                document.body.addEventListener('click', function unlockAudio() {
+                    audioCtx.resume();
+                    audioEnabled = true;
+                    soundStatus.innerText = "Sound: ON";
+                    soundStatus.style.color = "#00f260";
+                    document.body.removeEventListener('click', unlockAudio);
+                }, { once: true });
+            });
+        }
+
+        function playExplosionSound() {
+            if (!audioEnabled) return;
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.6);
+        }
+
+        // --- State ---
+        let fireworks = [];
+        let particles = [];
+        let canvasWidth, canvasHeight;
+        let timerTick = 0;
+
+        // --- Resize Handling ---
+        function resizeCanvas() {
+            canvasWidth = window.innerWidth;
+            canvasHeight = window.innerHeight;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- Utility Functions ---
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function calculateDistance(p1x, p1y, p2x, p2y) {
+            let xDistance = p1x - p2x;
+            let yDistance = p1y - p2y;
+            return Math.sqrt(Math.pow(xDistance, 2) + Math.pow(yDistance, 2));
+        }
+
+        // --- Classes ---
+
+        class Firework {
+            constructor(sx, sy, tx, ty) {
+                this.x = sx;
+                this.y = sy;
+                this.sx = sx;
+                this.sy = sy;
+                this.tx = tx;
+                this.ty = ty;
+                this.distanceToTarget = calculateDistance(sx, sy, tx, ty);
+                this.distanceTraveled = 0;
+                this.coordinates = [];
+                this.coordinateCount = 3;
+                while (this.coordinateCount--) {
+                    this.coordinates.push([this.x, this.y]);
+                }
+                this.angle = Math.atan2(ty - sy, tx - sx);
+                this.speed = 2;
+                this.acceleration = 1.05;
+                this.brightness = random(50, 70);
+                this.targetRadius = 1;
+            }
+
+            update(index) {
+                this.coordinates.pop();
+                this.coordinates.unshift([this.x, this.y]);
+
+                if (this.targetRadius < 8) {
+                    this.targetRadius += 0.3;
+                } else {
+                    this.targetRadius = 1;
+                }
+
+                this.speed *= this.acceleration;
+                let vx = Math.cos(this.angle) * this.speed;
+                let vy = Math.sin(this.angle) * this.speed;
+                this.distanceTraveled = calculateDistance(this.sx, this.sy, this.x + vx, this.y + vy);
+
+                if (this.distanceTraveled >= this.distanceToTarget) {
+                    createParticles(this.tx, this.ty);
+                    fireworks.splice(index, 1);
+                    playExplosionSound();
+                } else {
+                    this.x += vx;
+                    this.y += vy;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+                ctx.lineTo(this.x, this.y);
+                ctx.strokeStyle = 'hsl(' + random(0, 360) + ', 100%, ' + this.brightness + '%)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.lineWidth = 1; 
+
+                ctx.beginPath();
+                ctx.arc(this.tx, this.ty, this.targetRadius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.coordinates = [];
+                this.coordinateCount = 5;
+                while (this.coordinateCount--) {
+                    this.coordinates.push([this.x, this.y]);
+                }
+                this.angle = random(0, Math.PI * 2);
+                this.speed = random(4, 16); 
+                this.friction = CONFIG.friction;
+                this.gravity = CONFIG.gravity;
+                this.hue = random(0, 360);
+                this.brightness = random(50, 80);
+                this.alpha = 1;
+                this.decay = random(0.01, 0.02);
+            }
+
+            update(index) {
+                this.coordinates.pop();
+                this.coordinates.unshift([this.x, this.y]);
+                this.speed *= this.friction;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed + this.gravity;
+                this.alpha -= this.decay;
+
+                if (this.alpha <= this.decay) {
+                    particles.splice(index, 1);
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+                ctx.lineTo(this.x, this.y);
+                ctx.strokeStyle = 'hsla(' + this.hue + ', 100%, ' + this.brightness + '%, ' + this.alpha + ')';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.lineWidth = 1;
+            }
+        }
+
+        function createParticles(x, y) {
+            let particleCount = CONFIG.particleCount;
+            while (particleCount--) {
+                particles.push(new Particle(x, y));
+            }
+        }
+
+        // --- Main Animation Loop ---
+        function loop() {
+            requestAnimationFrame(loop);
+
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; 
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            ctx.globalCompositeOperation = 'lighter';
+
+            // Loop through fireworks
+            let i = fireworks.length;
+            while (i--) {
+                fireworks[i].draw();
+                fireworks[i].update(i);
+            }
+
+            // Loop through particles
+            let j = particles.length;
+            while (j--) {
+                particles[j].draw();
+                particles[j].update(j);
+            }
+
+            // Auto-launch logic
+            if (timerTick >= CONFIG.launchInterval) {
+                let startX = random(canvasWidth * 0.1, canvasWidth * 0.9);
+                let targetX = random(0, canvasWidth);
+                let targetY = random(0, canvasHeight * 0.6);
+                
+                fireworks.push(new Firework(startX, canvasHeight, targetX, targetY));
+                timerTick = 0;
+            } else {
+                timerTick++;
+            }
+        }
+
+        // --- Countdown Logic ---
+        function updateCountdown() {
+            const targetDate = new Date("January 1, 2026 00:00:00").getTime();
+            const now = new Date().getTime();
+            const difference = targetDate - now;
+
+            if (difference < 0) {
+                document.getElementById('countdown').innerHTML = "<div style='font-size: 2rem; color: var(--accent-gold)'>Happy New Year!</div>";
+                return;
+            }
+
+            const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+            countdownEls.days.innerText = String(days).padStart(2, '0');
+            countdownEls.hours.innerText = String(hours).padStart(2, '0');
+            countdownEls.minutes.innerText = String(minutes).padStart(2, '0');
+            countdownEls.seconds.innerText = String(seconds).padStart(2, '0');
+        }
+
+        // --- Initialization ---
+        window.onload = function() {
+            loop(); 
+            setInterval(updateCountdown, 1000);
+            updateCountdown();
+            
+            // AUTOMATICALLY TRY TO START SOUND
+            initAudio(); 
+        };
+
+    </script>
+</body>
+</html>
